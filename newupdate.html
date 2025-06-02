@@ -166,15 +166,14 @@
         font-size: 0.9em;
     }
 
-    #summary span {
+    #summary span { /* For fixed values like these */
       font-size: 1.3em;
       font-weight: 700;
-      color: var(--primary-color); /* Highlight totals */
       margin-top: 5px;
     }
 
-    #monthlyTotal, #totalDueOverall { /* New names for clarity */
-        color: var(--info-color); /* Use info color for primary totals */
+    #monthlyTotal, #totalDueOverall { /* Use info color for primary totals */
+        color: var(--info-color);
     }
     #totalPaid {
       color: var(--success-color);
@@ -505,9 +504,9 @@
         <div id="summary">
           <p><strong>Monthly Total:</strong><span id="monthlyTotal">₱0.00</span></p>
           <p><strong>Total Paid:</strong><span id="totalPaid">₱0.00</span></p>
-          <p><strong>Total Due:</strong><span id="totalDueOverall">₱0.00</span></p>
-          <p><strong>15th Overall Due:</strong><span id="overallDue15th">₱0.00</span></p>
-          <p><strong>30th Overall Due:</strong><span id="overallDue30th">₱0.00</span></p>
+          <p><strong>Total Due:</strong><span id="totalDueOverall">₱17847.46</span></p>
+          <p><strong>15th Overall Due:</strong><span id="overallDue15th">₱8923.73</span></p>
+          <p><strong>30th Overall Due:</strong><span id="overallDue30th">₱8923.73</span></p>
         </div>
         <div id="function-buttons">
           <div id="fileUploadContainer">
@@ -552,13 +551,16 @@
     document.getElementById("receiptTitle").innerText = `MONTH OF ${currentMonthName.toUpperCase()} ${currentYear}`;
 
     // --- Global Data and Variables ---
-    const STORAGE_KEY = 'payables';
-    let payables = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    const PAYABLES_STORAGE_KEY = 'payables';
+
+    let payables = JSON.parse(localStorage.getItem(PAYABLES_STORAGE_KEY)) || [];
     let currentSortField = null;
     let currentSortDirection = 1; // 1 = ascending; -1 = descending
 
-    // Define the overall monthly payment target. This can be made an input field if dynamic.
-    const TARGET_MONTHLY_PAYMENT = 17847.46; // PHP 17,847.46
+    // Fixed values for overall due amounts as requested
+    const FIXED_TOTAL_DUE = 17847.46;
+    const FIXED_15TH_DUE = 8923.73;
+    const FIXED_30TH_DUE = 8923.73;
 
     const vendorOptions = [
       "7 Eleven", "Baby sitting", "BDO Credit Card", "BPI", "Cebuana Lhuillier",
@@ -576,9 +578,9 @@
     const payableListEl = document.getElementById('payable-list');
 
     // Summary Elements
-    const monthlyTotalEl = document.getElementById('monthlyTotal'); // Renamed from totalMonthlyEl
+    const monthlyTotalEl = document.getElementById('monthlyTotal');
     const totalPaidEl = document.getElementById('totalPaid');
-    const totalDueOverallEl = document.getElementById('totalDueOverall'); // Renamed from totalDueEl
+    const totalDueOverallEl = document.getElementById('totalDueOverall');
     const overallDue15thEl = document.getElementById('overallDue15th');
     const overallDue30thEl = document.getElementById('overallDue30th');
 
@@ -589,7 +591,7 @@
 
     // Save payables to localStorage
     function savePayables() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(payables));
+      localStorage.setItem(PAYABLES_STORAGE_KEY, JSON.stringify(payables));
     }
 
     // Format a date string (assumed "YYYY-MM-DD") to M/D/YYYY
@@ -606,7 +608,6 @@
     function updateTotals() {
         let currentMonthCharges = 0; // Represents "Monthly Total"
         let totalPaidAmounts = 0; // Represents "Total Paid" from individual payables
-        let totalDueAmounts = 0; // Represents "Total Due" from individual payables
 
         const currentMonthStartDate = new Date(currentYear, currentMonthIndex, 1);
         const nextMonthStartDate = new Date(currentYear, currentMonthIndex + 1, 1);
@@ -621,7 +622,6 @@
             }
 
             // 2. Calculate Total Paid (cumulative with carry-over logic for June)
-            // 3. Calculate Total Due (reflecting individual items not yet paid)
             if (currentMonthName === "June") {
                 const mayStartDate = new Date(currentYear, 4, 1); // May 1st
                 const endOfMay = new Date(currentYear, 5, 0); // Last day of May
@@ -632,17 +632,13 @@
                 if (isMayCarryover || isDueInJune) {
                     if (item.paid) {
                         totalPaidAmounts += amt;
-                    } else {
-                        totalDueAmounts += amt;
                     }
                 }
             } else {
-                // For other months, simpler logic: current month's paid/due
+                // For other months, simpler logic: current month's paid items
                 if (itemDueDate >= currentMonthStartDate && itemDueDate < nextMonthStartDate) {
                     if (item.paid) {
                         totalPaidAmounts += amt;
-                    } else {
-                        totalDueAmounts += amt;
                     }
                 }
             }
@@ -652,15 +648,10 @@
         monthlyTotalEl.innerText = `₱${currentMonthCharges.toFixed(2)}`;
         totalPaidEl.innerText = `₱${totalPaidAmounts.toFixed(2)}`;
 
-        // These are based on your fixed target, not the sum of individual payables
-        // You mentioned "Total Due: The full monthly payment due on the 5th (e.g., July 5th). Amount: PHP 17,847.46"
-        // And 15th/30th are halves of this.
-        const actualTotalDueTarget = TARGET_MONTHLY_PAYMENT;
-        const halfDue = actualTotalDueTarget / 2;
-
-        totalDueOverallEl.innerText = `₱${actualTotalDueTarget.toFixed(2)}`;
-        overallDue15thEl.innerText = `₱${halfDue.toFixed(2)}`;
-        overallDue30thEl.innerText = `₱${halfDue.toFixed(2)}`;
+        // These are now fixed values as requested
+        totalDueOverallEl.innerText = `₱${FIXED_TOTAL_DUE.toFixed(2)}`;
+        overallDue15thEl.innerText = `₱${FIXED_15TH_DUE.toFixed(2)}`;
+        overallDue30thEl.innerText = `₱${FIXED_30TH_DUE.toFixed(2)}`;
     }
 
     // Inline editing helper
@@ -700,7 +691,7 @@
         let newValue;
         if (field === "amount") {
           newValue = parseFloat(inputElement.value).toFixed(2);
-          if (isNaN(newValue)) newValue = originalValue;
+          if (isNaN(newValue) || parseFloat(newValue) < 0) newValue = originalValue; // Revert if not a valid number
         } else {
           newValue = inputElement.value;
         }
@@ -727,7 +718,7 @@
       if (currentSortField) {
         payables.sort((a, b) => {
           let valA = a[currentSortField];
-          let valB = b[currentSortField];
+          let valB = b[current[currentSortField]];
 
           if (currentSortField === "amount") {
             return currentSortDirection * (parseFloat(valA) - parseFloat(valB));
@@ -777,7 +768,7 @@
         statusBtn.addEventListener("click", () => {
           item.paid = !item.paid;
           savePayables();
-          renderPayables();
+          renderPayables(); // Re-render to update status and totals
         });
         tdStatus.appendChild(statusBtn);
         tdStatus.dataset.label = "Status:";
@@ -787,14 +778,15 @@
         const tdActions = document.createElement("td");
         const deleteBtnSpan = document.createElement("span");
         deleteBtnSpan.classList.add("remove-item-btn");
-        deleteBtnSpan.dataset.index = index; // Store index for deletion
+        deleteBtnSpan.dataset.id = item.id; // Use item.id for deletion
         deleteBtnSpan.title = "Remove Item";
         deleteBtnSpan.innerHTML = "&times;"; // 'x' symbol
 
-        deleteBtnSpan.addEventListener("click", () => {
-            if (confirm(`Are you sure you want to delete the payable for ${item.biller}?`)) {
-                // Filter based on item ID to avoid issues if array order changes during editing
-                payables = payables.filter(p => p.id !== item.id);
+        deleteBtnSpan.addEventListener("click", (e) => {
+            const itemIdToDelete = parseInt(e.target.dataset.id);
+            const itemToDelete = payables.find(p => p.id === itemIdToDelete);
+            if (itemToDelete && confirm(`Are you sure you want to delete the payable for ${itemToDelete.biller}?`)) {
+                payables = payables.filter(p => p.id !== itemIdToDelete);
                 savePayables();
                 renderPayables();
             }
@@ -805,7 +797,7 @@
 
         payableListEl.appendChild(tr);
       });
-      updateTotals();
+      updateTotals(); // Always update totals after rendering rows
     }
 
     // Attach click listeners to table headers for sorting.
@@ -829,7 +821,7 @@
         const status = item.paid ? "Settled/Done" : "Due";
         content += `${item.biller},${parseFloat(item.amount).toFixed(2)},${item.dueDate},${status}\n`;
       });
-      const blob = new Blob([content], { type: "text/csv" }); // Changed type to text/csv
+      const blob = new Blob([content], { type: "text/csv" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -874,10 +866,18 @@
             }
 
             if (newPayables.length > 0) {
-                payables = [...payables, ...newPayables]; // Add to existing payables
-                savePayables();
-                renderPayables();
-                alert(`${newPayables.length} items imported successfully!`);
+                // Ensure no duplicate IDs if importing the same file multiple times
+                const existingIds = new Set(payables.map(p => p.id));
+                const uniqueNewPayables = newPayables.filter(p => !existingIds.has(p.id));
+
+                if (uniqueNewPayables.length > 0) {
+                    payables = [...payables, ...uniqueNewPayables]; // Add to existing payables
+                    savePayables();
+                    renderPayables();
+                    alert(`${uniqueNewPayables.length} new items imported successfully!`);
+                } else {
+                    alert('No new unique items found in the uploaded file.');
+                }
             } else {
                 alert('No valid data found in the uploaded file or file is empty.');
             }
@@ -897,12 +897,12 @@
 
     function parseCSV(csvString) {
         const lines = csvString.trim().split('\n');
-        if (lines.length <= 1) return []; // Only header or empty
+        if (lines.length <= 1) return [];
 
         const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
         const billerIndex = headers.indexOf('biller');
         const amountIndex = headers.indexOf('amount');
-        const dueDateIndex = headers.indexOf('due date'); // Can be 'due date' or 'duedate'
+        const dueDateIndex = headers.indexOf('due date');
         const statusIndex = headers.indexOf('status');
 
         if (billerIndex === -1 || amountIndex === -1 || dueDateIndex === -1 || statusIndex === -1) {
@@ -919,26 +919,37 @@
             }
 
             const biller = values[billerIndex]?.trim();
-            const amount = parseFloat(values[amountIndex]?.replace(/[^0-9.-]+/g,""))?.toFixed(2); // Remove non-numeric chars except . and -
+            const amount = parseFloat(values[amountIndex]?.replace(/[^0-9.-]+/g,""));
             let dueDate = values[dueDateIndex]?.trim();
             const status = values[statusIndex]?.trim().toLowerCase();
 
-            // Validate and standardize date format (MM/DD/YYYY to YYYY-MM-DD for input[type="date"])
+            if (isNaN(amount) || amount < 0) {
+                 console.warn(`Skipping invalid amount in CSV row: ${lines[i]}`);
+                 continue;
+            }
+
             if (dueDate) {
-                const dateParts = dueDate.split(/[\/-]/); // Split by / or -
+                const dateParts = dueDate.split(/[\/-]/);
+                let d;
                 if (dateParts.length === 3) {
-                    // Assume MM/DD/YYYY or DD/MM/YYYY
-                    let d = new Date(dueDate);
-                    if (isNaN(d.getTime())) { // If new Date(dueDate) fails, try MM/DD/YYYY
-                        d = new Date(`${dateParts[0]}/${dateParts[1]}/${dateParts[2]}`);
+                    // Prioritize MM/DD/YYYY, then DD/MM/YYYY if that fails, then YYYY-MM-DD
+                    d = new Date(`${dateParts[0]}/${dateParts[1]}/${dateParts[2]}`); // Try MM/DD/YYYY
+                    if (isNaN(d.getTime())) { // If not valid, try DD/MM/YYYY
+                        d = new Date(`${dateParts[1]}/${dateParts[0]}/${dateParts[2]}`);
                     }
-                    if (!isNaN(d.getTime())) {
-                        dueDate = d.toISOString().split('T')[0]; // Convert to YYYY-MM-DD
-                    } else {
-                        dueDate = ''; // Invalid date
+                    if (isNaN(d.getTime()) && dateParts[2].length === 4) { // Try YYYY-MM-DD
+                        d = new Date(`${dateParts[2]}-${dateParts[0]}-${dateParts[1]}`);
                     }
+                } else if (dueDate.match(/^\d{4}-\d{2}-\d{2}$/)) { // Already YYYY-MM-DD
+                     d = new Date(dueDate + 'T00:00:00');
                 } else {
-                    dueDate = ''; // Invalid format
+                    d = new Date(dueDate); // Let JS try to parse
+                }
+
+                if (!isNaN(d.getTime())) {
+                    dueDate = d.toISOString().split('T')[0]; // Convert to YYYY-MM-DD
+                } else {
+                    dueDate = ''; // Invalid date
                 }
             }
 
@@ -949,12 +960,12 @@
                 importedItems.push({
                     id: Date.now() + i, // Unique ID for imported items
                     biller,
-                    amount,
+                    amount: amount.toFixed(2),
                     dueDate,
                     paid
                 });
             } else {
-                console.warn(`Skipping invalid row: Biller: "${biller}", Amount: "${amount}", DueDate: "${dueDate}", Status: "${status}"`);
+                console.warn(`Skipping invalid row: Biller: "${biller}", Amount: "${amount}", DueDate: "${dueDate}", Status: "${status}" in row: ${lines[i]}`);
             }
         }
         return importedItems;
@@ -964,9 +975,9 @@
         const workbook = XLSX.read(arrayBuffer, { type: 'array' });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); // Read as array of arrays
+        const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-        if (json.length < 2) return []; // At least header and one data row
+        if (json.length < 2) return [];
 
         const headerRow = json[0].map(h => String(h).trim().toLowerCase());
         const billerIndex = headerRow.indexOf('biller');
@@ -983,28 +994,39 @@
         for (let i = 1; i < json.length; i++) {
             const row = json[i];
             const biller = String(row[billerIndex] || '').trim();
-            const amount = parseFloat(String(row[amountIndex] || '').replace(/[^0-9.-]+/g,""))?.toFixed(2);
+            const amount = parseFloat(String(row[amountIndex] || '').replace(/[^0-9.-]+/g,""));
             let dueDate = String(row[dueDateIndex] || '').trim();
             const status = String(row[statusIndex] || '').trim().toLowerCase();
 
+            if (isNaN(amount) || amount < 0) {
+                 console.warn(`Skipping invalid amount in Excel row: ${row}`);
+                 continue;
+            }
+
             // Handle date conversion from Excel number format
             if (typeof row[dueDateIndex] === 'number') {
-                // Assuming Excel date is a number (days since 1900-01-01)
                 const excelDate = row[dueDateIndex];
                 const date = new Date(Date.UTC(0, 0, excelDate - 1)); // -1 for Excel's 1900 leap year bug
                 dueDate = date.toISOString().split('T')[0]; // YYYY-MM-DD
             } else if (dueDate) {
-                 const dateParts = dueDate.split(/[\/-]/);
+                const dateParts = dueDate.split(/[\/-]/);
+                let d;
                 if (dateParts.length === 3) {
-                    let d = new Date(dueDate);
+                     d = new Date(`${dateParts[0]}/${dateParts[1]}/${dateParts[2]}`);
                     if (isNaN(d.getTime())) {
-                        d = new Date(`${dateParts[0]}/${dateParts[1]}/${dateParts[2]}`);
+                        d = new Date(`${dateParts[1]}/${dateParts[0]}/${dateParts[2]}`);
                     }
-                    if (!isNaN(d.getTime())) {
-                        dueDate = d.toISOString().split('T')[0];
-                    } else {
-                        dueDate = '';
+                    if (isNaN(d.getTime()) && dateParts[2].length === 4) {
+                        d = new Date(`${dateParts[2]}-${dateParts[0]}-${dateParts[1]}`);
                     }
+                } else if (dueDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                     d = new Date(dueDate + 'T00:00:00');
+                } else {
+                    d = new Date(dueDate);
+                }
+
+                if (!isNaN(d.getTime())) {
+                    dueDate = d.toISOString().split('T')[0];
                 } else {
                     dueDate = '';
                 }
@@ -1017,17 +1039,16 @@
                 importedItems.push({
                     id: Date.now() + i,
                     biller,
-                    amount,
+                    amount: amount.toFixed(2),
                     dueDate,
                     paid
                 });
             } else {
-                console.warn(`Skipping invalid Excel row: Biller: "${biller}", Amount: "${amount}", DueDate: "${dueDate}", Status: "${status}"`);
+                console.warn(`Skipping invalid Excel row: Biller: "${biller}", Amount: "${amount}", DueDate: "${dueDate}", Status: "${status}" in row: ${row}`);
             }
         }
         return importedItems;
     }
-
 
     // Handle adding a new payable record from the form submission.
     form.addEventListener("submit", e => {
@@ -1055,8 +1076,12 @@
       billerSelect.selectedIndex = 0;
     });
 
-    // Initial render on page load.
+    // Initial render and setup
     renderPayables();
+
+    // Attach event listeners to the download and clear buttons (already present)
+    downloadBtn.addEventListener("click", downloadAsText);
+    clearBtn.addEventListener("click", clearAll);
   </script>
 </body>
 </html>
