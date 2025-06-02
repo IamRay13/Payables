@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Receipt - MONTH OF ...</title>
+  <!-- Favicon using Philippine Peso symbol -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text x='0' y='14' font-size='16'>₱</text></svg>">
+  <style>
+    :root {
+      --receipt-border: #222528;   /* Dark tone for receipt container border */
+      --receipt-header: #53655C;   /* For header background */
+      --function-btn: #B09F95;      /* For function buttons (download and clear) */
+      --text-color: #222528;        /* Use for general text */
+      --table-header: #53655C;
+      --light-bg: #E5E5E5;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: var(--light-bg);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text-color);
+      padding: 20px;
+    }
+    /* Receipt container mimics a printed receipt – increased max-width to 1100px */
+    .receipt-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      border: 2px solid var(--receipt-border);
+      background: #fff;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      padding-bottom: 20px;
+    }
+    /* Header style for the receipt (title will be updated via JavaScript) */
+    h1 {
+      text-align: center;
+      background: var(--receipt-header);
+      color: #fff;
+      padding: 15px 0;
+      margin-bottom: 20px;
+      font-size: 2em;
+    }
+    /* Container for side-by-side panels */
+    .app-container {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      padding: 0 20px 20px 20px;
+    }
+    .left-panel, .right-panel {
+      flex: 1;
+      min-width: 300px;
+    }
+    /* Form styling */
+    form {
+      background: #fff;
+      padding: 20px;
+      border: 1px solid var(--light-bg);
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    form label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    form input, form select, form button {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    form input:focus, form select:focus, form button:focus {
+      outline: none;
+      border-color: var(--receipt-header);
+    }
+    form button {
+      background: var(--receipt-header);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      margin-top: 10px;
+    }
+    form button:hover {
+      background: #425958;
+    }
+    /* Summary and function buttons container */
+    #summary {
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      border: 1px solid var(--light-bg);
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+    }
+    #summary p {
+      margin: 5px;
+      font-size: 16px;
+    }
+    /* Function buttons (download and clear) */
+    #function-buttons {
+      margin-bottom: 15px;
+      text-align: right;
+      padding: 0 10px;
+    }
+    .download-btn, .clear-btn {
+      background-color: var(--function-btn);
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-left: 10px;
+      transition: background 0.3s ease;
+    }
+    .download-btn:hover, .clear-btn:hover {
+      opacity: 0.9;
+    }
+    /* Table styling – fully contained in the receipt */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: center;
+      font-size: 14px;
+    }
+    th {
+      background: var(--table-header);
+      color: #fff;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    tr:nth-child(even) {
+      background: var(--light-bg);
+    }
+    /* Table action buttons – status and delete colors remain unchanged */
+    .status-btn, .delete-btn {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .status-btn.due {
+      background-color: #e74c3c;
+    }
+    .status-btn.paid {
+      background-color: #27ae60;
+    }
+    .delete-btn {
+      background-color: #c0392b;
+    }
+    .delete-btn:hover {
+      background-color: #a93226;
+    }
+    @media (max-width: 600px) {
+      .app-container {
+        flex-direction: column;
+      }
+      #function-buttons {
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="receipt-container">
+    <h1 id="receiptTitle">MONTH OF ...</h1>
+    <div class="app-container">
+      <!-- Left Panel: Form to add a payable -->
+      <div class="left-panel">
+        <form id="payable-form">
+          <div class="form-group">
+            <label for="biller">Select Vendor</label>
+            <select id="biller" required>
+              <option value="" disabled selected>--Select a vendor--</option>
+              <!-- Sorted vendor options -->
+              <option value="BDO Credit Card">BDO Credit Card</option>
+              <option value="BPI">BPI</option>
+              <option value="Cebuana Lhuillier">Cebuana Lhuillier</option>
+              <option value="DITO">DITO</option>
+              <option value="Globe">Globe</option>
+              <option value="GCash Loan">GCash Loan</option>
+              <option value="Gomo">Gomo</option>
+              <option value="LBC Express">LBC Express</option>
+              <option value="Manila Water">Manila Water</option>
+              <option value="Maynilad">Maynilad</option>
+              <option value="MECO">MECO</option>
+              <option value="Meralco">Meralco</option>
+              <option value="Metrobank">Metrobank</option>
+              <option value="Netflix">Netflix</option>
+              <option value="PLDT">PLDT</option>
+              <option value="RCBC">RCBC</option>
+              <option value="Seabank">Seabank</option>
+              <option value="Security Bank">Security Bank</option>
+              <option value="SLoan">SLoan</option>
+              <option value="Smart">Smart</option>
+              <option value="Spaylater">Spaylater</option>
+              <option value="Spotify">Spotify</option>
+              <option value="UnionBank">UnionBank</option>
+              <option value="VECO">VECO</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="amount">Amount in PHP</label>
+            <input type="number" id="amount" placeholder="Enter amount in PHP" min="0" step="0.01" required>
+          </div>
+          <div class="form-group">
+            <label for="dueDate">Due Date</label>
+            <input type="date" id="dueDate" required>
+          </div>
+          <button type="submit">Add Payable</button>
+        </form>
+      </div>
+      <!-- Right Panel: Summary, function buttons, and table listing -->
+      <div class="right-panel">
+        <div id="summary">
+          <p><strong>Monthly Total:</strong> ₱<span id="totalMonthly">0.00</span></p>
+          <p><strong>Total Paid:</strong> ₱<span id="totalPaid">0.00</span></p>
+          <p><strong>Total Due:</strong> ₱<span id="totalDue">0.00</span></p>
+        </div>
+        <div id="function-buttons">
+          <button class="download-btn" id="downloadBtn">Download as Text</button>
+          <button class="clear-btn" id="clearBtn">Clear All</button>
+        </div>
+        <!-- Table fully contained and aligned inside the receipt -->
+        <table>
+          <thead>
+            <tr>
+              <th data-sort-field="biller">Vendor</th>
+              <th data-sort-field="amount">Amount</th>
+              <th data-sort-field="dueDate">Due Date</th>
+              <th data-sort-field="paid">Status</th>
+              <th>Delete</th>
+            </tr>
+          </thead>
+          <tbody id="payable-list">
+            <!-- Dynamic rows will be inserted here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <script>
+    // --- Dynamic Month Updates ---
+    // Define month names and get the current month.
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+    const now = new Date();
+    const currentMonthName = monthNames[now.getMonth()];
+    
+    // Update the document title and the H1 header.
+    document.title = "Receipt - MONTH OF " + currentMonthName.toUpperCase();
+    document.getElementById("receiptTitle").innerText = "MONTH OF " + currentMonthName.toUpperCase();
+
+    // --- Global Data and Variables ---
+    const STORAGE_KEY = 'payables';
+    let payables = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    let currentSortField = null;
+    let currentSortDirection = 1; // 1 = ascending; -1 = descending
+
+    // Vendor options for inline editing (sorted and matching form choices)
+    const vendorOptions = [
+      "BDO Credit Card", "BPI", "Cebuana Lhuillier", "DITO", "Globe",
+      "GCash Loan", "Gomo", "LBC Express", "Manila Water", "Maynilad",
+      "MECO", "Meralco", "Metrobank", "Netflix", "PLDT", "RCBC",
+      "Seabank", "Security Bank", "SLoan", "Smart", "Spaylater",
+      "Spotify", "UnionBank", "VECO"
+    ];
+
+    // DOM Elements
+    const form = document.getElementById('payable-form');
+    const billerSelect = document.getElementById('biller');
+    const amountInput = document.getElementById('amount');
+    const dueDateInput = document.getElementById('dueDate');
+    const payableListEl = document.getElementById('payable-list');
+    const totalMonthlyEl = document.getElementById('totalMonthly');
+    const totalPaidEl = document.getElementById('totalPaid');
+    const totalDueEl = document.getElementById('totalDue');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const clearBtn = document.getElementById('clearBtn');
+
+    // Save payables to localStorage
+    function savePayables() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payables));
+    }
+
+    // Format a date string (assumed "YYYY-MM-DD") to M/D/YYYY
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const dateObj = new Date(dateStr);
+      const month = dateObj.getMonth() + 1;
+      const day = dateObj.getDate();
+      const year = dateObj.getFullYear();
+      return month + '/' + day + '/' + year;
+    }
+
+    // Update summary totals from the current list
+    function updateTotals() {
+      let totalMonthly = 0, totalPaid = 0, totalDue = 0;
+      payables.forEach(item => {
+        const amt = parseFloat(item.amount);
+        totalMonthly += amt;
+        if (item.paid) {
+          totalPaid += amt;
+        } else {
+          totalDue += amt;
+        }
+      });
+      totalMonthlyEl.innerText = totalMonthly.toFixed(2);
+      totalPaidEl.innerText = totalPaid.toFixed(2);
+      totalDueEl.innerText = totalDue.toFixed(2);
+    }
+
+    // Inline editing helper: make a table cell editable without shifting the layout.
+    function makeCellEditable(td, field, item) {
+      const currentWidth = td.offsetWidth;
+      td.style.minWidth = currentWidth + "px";
+      const originalValue = item[field];
+      if (field === "biller") {
+        const select = document.createElement("select");
+        select.style.width = currentWidth + "px";
+        vendorOptions.forEach(opt => {
+          const option = document.createElement("option");
+          option.value = opt;
+          option.text = opt;
+          if (opt === originalValue) option.selected = true;
+          select.appendChild(option);
+        });
+        select.addEventListener("blur", () => {
+          item[field] = select.value;
+          td.style.minWidth = "";
+          savePayables();
+          renderPayables();
+        });
+        td.innerHTML = "";
+        td.appendChild(select);
+        select.focus();
+      } else if (field === "amount") {
+        const input = document.createElement("input");
+        input.type = "number";
+        input.step = "0.01";
+        input.value = originalValue;
+        input.style.width = currentWidth + "px";
+        input.addEventListener("blur", () => {
+          item[field] = parseFloat(input.value).toFixed(2);
+          td.style.minWidth = "";
+          savePayables();
+          renderPayables();
+        });
+        td.innerHTML = "";
+        td.appendChild(input);
+        input.focus();
+      } else if (field === "dueDate") {
+        const input = document.createElement("input");
+        input.type = "date";
+        input.value = originalValue;
+        input.style.width = currentWidth + "px";
+        input.addEventListener("blur", () => {
+          item[field] = input.value;
+          td.style.minWidth = "";
+          savePayables();
+          renderPayables();
+        });
+        td.innerHTML = "";
+        td.appendChild(input);
+        input.focus();
+      }
+    }
+
+    // Render table rows (with inline editing support)
+    function renderPayables() {
+      if (currentSortField) {
+        payables.sort((a, b) => {
+          let valA = a[currentSortField], valB = b[currentSortField];
+          if (currentSortField === "amount") {
+            return currentSortDirection * (parseFloat(valA) - parseFloat(valB));
+          } else if (currentSortField === "dueDate") {
+            return currentSortDirection * (new Date(valA) - new Date(valB));
+          } else if (currentSortField === "biller") {
+            return currentSortDirection * valA.localeCompare(valB);
+          } else if (currentSortField === "paid") {
+            return currentSortDirection * ((a.paid ? 1 : 0) - (b.paid ? 1 : 0));
+          }
+          return 0;
+        });
+      }
+      payableListEl.innerHTML = "";
+      payables.forEach(item => {
+        const tr = document.createElement("tr");
+
+        // Vendor cell with inline editing on double-click
+        const tdBiller = document.createElement("td");
+        tdBiller.innerText = item.biller;
+        tdBiller.ondblclick = () => makeCellEditable(tdBiller, "biller", item);
+        tr.appendChild(tdBiller);
+
+        // Amount cell with inline editing
+        const tdAmount = document.createElement("td");
+        tdAmount.innerText = "₱" + parseFloat(item.amount).toFixed(2);
+        tdAmount.ondblclick = () => makeCellEditable(tdAmount, "amount", item);
+        tr.appendChild(tdAmount);
+
+        // Due Date cell with inline editing
+        const tdDueDate = document.createElement("td");
+        tdDueDate.innerText = formatDate(item.dueDate);
+        tdDueDate.ondblclick = () => makeCellEditable(tdDueDate, "dueDate", item);
+        tr.appendChild(tdDueDate);
+
+        // Status cell with toggle button
+        const tdStatus = document.createElement("td");
+        const statusBtn = document.createElement("button");
+        statusBtn.classList.add("status-btn");
+        if (item.paid) {
+          statusBtn.innerText = "Settled/Done";
+          statusBtn.classList.add("paid");
+        } else {
+          statusBtn.innerText = "Due";
+          statusBtn.classList.add("due");
+        }
+        statusBtn.addEventListener("click", () => {
+          item.paid = !item.paid;
+          savePayables();
+          renderPayables();
+          updateTotals();
+        });
+        tdStatus.appendChild(statusBtn);
+        tr.appendChild(tdStatus);
+
+        // Delete cell with delete button
+        const tdDelete = document.createElement("td");
+        const deleteBtn = document.createElement("button");
+        deleteBtn.classList.add("delete-btn");
+        deleteBtn.innerText = "Delete";
+        deleteBtn.addEventListener("click", () => {
+          payables = payables.filter(p => p.id !== item.id);
+          savePayables();
+          renderPayables();
+          updateTotals();
+        });
+        tdDelete.appendChild(deleteBtn);
+        tr.appendChild(tdDelete);
+
+        payableListEl.appendChild(tr);
+      });
+      updateTotals();
+    }
+
+    // Attach click listeners to table headers for sorting.
+    document.querySelectorAll("th[data-sort-field]").forEach(header => {
+      header.addEventListener("click", () => {
+        const field = header.getAttribute("data-sort-field");
+        if (currentSortField === field) {
+          currentSortDirection = -currentSortDirection;
+        } else {
+          currentSortField = field;
+          currentSortDirection = 1;
+        }
+        renderPayables();
+      });
+    });
+
+    // Function to download the current payables as a text receipt.
+    function downloadAsText() {
+      let content = "MONTH OF " + currentMonthName.toUpperCase() + "\n\n";
+      content += "Vendor\tAmount\tDue Date\tStatus\n";
+      payables.forEach(item => {
+        content += `${item.biller}\t₱${parseFloat(item.amount).toFixed(2)}\t${formatDate(item.dueDate)}\t${item.paid ? "Settled/Done" : "Due"}\n`;
+      });
+      const blob = new Blob([content], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Month of " + currentMonthName + ".txt";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Function to clear all payables after confirmation.
+    function clearAll() {
+      if (confirm("Are you sure you want to clear all payables?")) {
+        payables = [];
+        savePayables();
+        renderPayables();
+      }
+    }
+
+    // Handle adding a new payable record from the form submission.
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+      const biller = billerSelect.value;
+      const amount = parseFloat(amountInput.value).toFixed(2);
+      const dueDate = dueDateInput.value;
+      if (!biller || isNaN(amount) || !dueDate) {
+        alert("Please fill in all required fields correctly.");
+        return;
+      }
+      const newPayable = {
+        id: Date.now(),
+        biller,
+        amount,
+        dueDate,
+        paid: false
+      };
+      payables.push(newPayable);
+      savePayables();
+      renderPayables();
+      form.reset();
+      billerSelect.selectedIndex = 0;
+    });
+
+    // Attach event listeners to the download and clear buttons.
+    downloadBtn.addEventListener("click", downloadAsText);
+    clearBtn.addEventListener("click", clearAll);
+
+    // Initial render on page load.
+    renderPayables();
+  </script>
+</body>
+</html>
