@@ -384,49 +384,58 @@
         margin: 5px;
         width: calc(50% - 10px); /* Two buttons per row */
       }
-      table, th, td {
-        display: block; /* Stack table elements on small screens */
-        width: 100%;
+
+      /* Table specific responsive rules */
+      table {
+        border: none; /* Remove outer table border on mobile */
+        box-shadow: none; /* Remove outer shadow */
+        border-radius: 0;
       }
-      th {
-        text-align: left;
-        padding: 10px 15px;
-        border-bottom: none;
+
+      thead {
+        display: none; /* HIDE THE ACTUAL TABLE HEADERS ON SMALL SCREENS */
       }
+
+      tr {
+        display: block; /* Make each row a block */
+        margin-bottom: 15px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        box-shadow: 0 2px 8px var(--shadow-light);
+        padding: 10px; /* Add padding to the row block */
+      }
+
       td {
-        text-align: right;
-        padding: 8px 15px;
-        position: relative;
-        padding-left: 50%; /* Space for pseudo-element label */
-        border-bottom: none;
+        border: none; /* Remove individual cell borders */
+        display: flex; /* Use flexbox for label and data within each cell */
+        justify-content: space-between; /* Space between label and data */
+        align-items: center; /* Vertically align content */
+        padding: 8px 15px; /* Padding for each cell */
+        text-align: right; /* Align data to the right */
+        position: relative; /* Needed for ::before positioning */
       }
+
       td:before { /* Add labels for table cells */
         content: attr(data-label);
-        position: absolute;
-        left: 15px;
-        width: calc(50% - 30px);
-        text-align: left;
         font-weight: 600;
         color: var(--text-dark);
+        text-align: left; /* Align label to the left */
+        flex-shrink: 0; /* Prevent label from shrinking */
+        padding-right: 10px; /* Space between label and value */
       }
-      /* Specific labels for each cell */
+
+      /* Specific labels for each cell - ensure they match data-label in JS */
       td:nth-of-type(1):before { content: "Biller:"; }
       td:nth-of-type(2):before { content: "Amount:"; }
       td:nth-of-type(3):before { content: "Due Date:"; }
       td:nth-of-type(4):before { content: "Status:"; }
       td:nth-of-type(5):before { content: "Action:"; }
 
-      tr {
-        margin-bottom: 15px;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        box-shadow: 0 2px 8px var(--shadow-light);
-        display: block;
-        padding-bottom: 10px;
+      /* Adjust status button and remove button within td */
+      .status-btn, .remove-item-btn {
+          margin-left: auto; /* Push to the right within flex container */
+          flex-shrink: 0; /* Prevent buttons from shrinking */
       }
-
-      th:first-child, th:last-child { border-radius: 0; }
-      table { border-radius: 0; box-shadow: none;}
     }
 
     @media (max-width: 480px) {
@@ -861,8 +870,10 @@
         const newPayables = [];
         data.forEach(row => {
             const biller = row.Biller || row.biller;
-            let amount = parseFloat(row["Amount Due Date"] || row.amount || 0); // Handle "Amount Due Date" as amount
-            let dueDate = row["Due Date"] || row.dueDate;
+            // Prioritize "AMOUNT DUE DATE" then "Amount" then "amount"
+            let amount = parseFloat(row["AMOUNT DUE DATE"] || row.Amount || row.amount || 0);
+            // Prioritize "DUE DATE" then "Due Date" then "dueDate"
+            let dueDate = row["DUE DATE"] || row["Due Date"] || row.dueDate;
             let status = row.Status || row.status;
 
             // Basic validation and type conversion
@@ -870,10 +881,12 @@
                 // Try to parse various date formats. If it's a number (Excel date), convert it.
                 if (typeof dueDate === 'number') {
                     // Excel dates are days since 1900-01-01 (or 1904-01-01 for Mac Excel)
-                    // Assuming Windows Excel (1900-based)
+                    // Assuming Windows Excel (1900-based). Adjust if needed for Mac Excel.
                     const excelEpoch = new Date(Date.UTC(1899, 11, 30));
-                    dueDate = new Date(excelEpoch.getTime() + (dueDate * 24 * 60 * 60 * 1000));
-                    dueDate = dueDate.toISOString().split('T')[0]; // Format to YYYY-MM-DD
+                    let dateObj = new Date(excelEpoch.getTime() + (dueDate * 24 * 60 * 60 * 1000));
+                    // Handle potential timezone offset that might push it to previous day
+                    dateObj = new Date(dateObj.getTime() + dateObj.getTimezoneOffset() * 60000);
+                    dueDate = dateObj.toISOString().split('T')[0]; // Format to YYYY-MM-DD
                 } else {
                     // Attempt to parse string date (e.g., "MM/DD/YYYY", "YYYY-MM-DD")
                     try {
@@ -906,7 +919,7 @@
             renderPayables();
             alert(`${newPayables.length} items successfully added from file.`);
         } else {
-            alert("No valid payable items found in the file. Please ensure columns 'Biller', 'Amount Due Date' (or 'Amount'), and 'Due Date' exist and contain valid data.");
+            alert("No valid payable items found in the file. Please ensure columns 'Biller', 'AMOUNT DUE DATE' (or 'Amount'), and 'DUE DATE' exist and contain valid data.");
         }
     }
 
@@ -915,7 +928,7 @@
         const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
         if (lines.length === 0) return [];
 
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const headers = lines[0].split(',').map(h => h.trim()); // Keep original case for header matching
         const data = [];
 
         for (let i = 1; i < lines.length; i++) {
@@ -936,11 +949,40 @@
             reader.onload = (e) => {
                 try {
                     const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true }); // cellDates: true for date parsing
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
-                    const json = XLSX.utils.sheet_to_json(worksheet, { raw: false, defval: null }); // raw:false to get formatted dates
-                    resolve(json);
+                    // raw: false will attempt to return formatted values (like dates)
+                    const json = XLSX.utils.sheet_to_json(worksheet, { raw: false, defval: null, header: 1 });
+
+                    // Re-process headers to be case-insensitive and handle 'AMOUNT DUE DATE'
+                    if (json.length > 0) {
+                        const headerRow = json[0];
+                        const dataRows = json.slice(1);
+                        const processedData = dataRows.map(row => {
+                            const newRow = {};
+                            headerRow.forEach((header, index) => {
+                                if (header) { // Ensure header is not null/undefined
+                                    const lowerCaseHeader = String(header).trim().toLowerCase();
+                                    if (lowerCaseHeader === 'amount due date') {
+                                        newRow['AMOUNT DUE DATE'] = row[index]; // Keep specific header name
+                                    } else if (lowerCaseHeader === 'biller') {
+                                        newRow['Biller'] = row[index];
+                                    } else if (lowerCaseHeader === 'due date') {
+                                        newRow['DUE DATE'] = row[index];
+                                    } else if (lowerCaseHeader === 'status') {
+                                        newRow['Status'] = row[index];
+                                    } else {
+                                        newRow[header] = row[index]; // Fallback for other headers
+                                    }
+                                }
+                            });
+                            return newRow;
+                        });
+                        resolve(processedData);
+                    } else {
+                        resolve([]);
+                    }
                 } catch (error) {
                     reject(new Error("Error parsing Excel file: " + error.message));
                 }
@@ -949,6 +991,7 @@
             reader.readAsArrayBuffer(file);
         });
     }
+
 
     // Handle file input change
     fileInput.addEventListener('change', (event) => {
@@ -978,6 +1021,7 @@
         } else {
             alert("Unsupported file type. Please upload a CSV or Excel (.xlsx, .xls) file.");
         }
+        event.target.value = ''; // Clear the file input for next upload
     });
 
     // Attach event listener to the upload button (optional, can also use fileInput 'change')
