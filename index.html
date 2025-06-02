@@ -2,183 +2,441 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Receipt - MONTH OF ...</title>
-  <!-- Favicon using Philippine Peso symbol -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text x='0' y='14' font-size='16'>₱</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
+    /* Modern Color Palette */
     :root {
-      --receipt-border: #222528;   /* Dark tone for receipt container border */
-      --receipt-header: #53655C;   /* For header background */
-      --function-btn: #B09F95;      /* For function buttons (download and clear) */
-      --text-color: #222528;        /* Use for general text */
-      --table-header: #53655C;
-      --light-bg: #E5E5E5;
+      --primary-color: #4CAF50; /* A vibrant green for main accents */
+      --secondary-color: #FFC107; /* A warm yellow for secondary actions/highlights */
+      --background-light: #F4F6F8; /* Light background for the body */
+      --card-background: #FFFFFF; /* White for cards/containers */
+      --text-dark: #333333; /* Dark text for readability */
+      --text-light: #666666; /* Lighter text for secondary info */
+      --border-color: #E0E0E0; /* Subtle border for elements */
+      --success-color: #28A745; /* Green for paid status */
+      --danger-color: #DC3545; /* Red for due status/delete */
+      --button-hover: #45a049; /* Darker green on hover */
+      --shadow-light: rgba(0, 0, 0, 0.08); /* Light shadow for depth */
+      --shadow-medium: rgba(0, 0, 0, 0.15); /* Medium shadow */
     }
+
+    /* General Body Styling */
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
+
     body {
-      background: var(--light-bg);
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      color: var(--text-color);
+      background: var(--background-light);
+      font-family: 'Poppins', sans-serif; /* Modern, clean font */
+      color: var(--text-dark);
       padding: 20px;
+      line-height: 1.6;
     }
-    /* Receipt container mimics a printed receipt – increased max-width to 1100px */
+
+    /* Receipt Container */
     .receipt-container {
-      max-width: 1100px;
-      margin: 0 auto;
-      border: 2px solid var(--receipt-border);
-      background: #fff;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      padding-bottom: 20px;
+      max-width: 1200px; /* Slightly wider for more content */
+      margin: 20px auto;
+      border-radius: 12px; /* Rounded corners */
+      overflow: hidden; /* Contains internal shadows */
+      background: var(--card-background);
+      box-shadow: 0 10px 30px var(--shadow-medium); /* Deeper shadow for elevation */
+      display: flex;
+      flex-direction: column;
     }
-    /* Header style for the receipt (title will be updated via JavaScript) */
+
+    /* Header */
     h1 {
       text-align: center;
-      background: var(--receipt-header);
+      background: var(--primary-color);
       color: #fff;
-      padding: 15px 0;
-      margin-bottom: 20px;
-      font-size: 2em;
+      padding: 25px 0; /* More padding */
+      margin-bottom: 0;
+      font-size: 2.5em; /* Larger title */
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-shadow: 1px 1px 2px var(--shadow-medium);
     }
-    /* Container for side-by-side panels */
+
+    /* Main App Layout */
     .app-container {
       display: flex;
-      gap: 20px;
+      gap: 30px; /* Increased gap */
       flex-wrap: wrap;
-      padding: 0 20px 20px 20px;
+      padding: 30px; /* More padding */
     }
+
     .left-panel, .right-panel {
       flex: 1;
-      min-width: 300px;
+      min-width: 320px; /* Adjusted min-width for responsiveness */
     }
-    /* Form styling */
+
+    /* Form Styling */
     form {
-      background: #fff;
-      padding: 20px;
-      border: 1px solid var(--light-bg);
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+      background: var(--card-background);
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px var(--shadow-light); /* Subtle shadow */
+      margin-bottom: 25px;
+      border: 1px solid var(--border-color); /* Light border */
+    }
+
+    .form-group {
       margin-bottom: 20px;
     }
-    .form-group {
-      margin-bottom: 15px;
-    }
+
     form label {
       display: block;
-      margin-bottom: 5px;
-      font-weight: 500;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: var(--text-dark);
+      font-size: 0.95em;
     }
-    form input, form select, form button {
+
+    form input, form select {
       width: 100%;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 16px;
+      padding: 12px 15px; /* More padding for inputs */
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 1em;
+      color: var(--text-dark);
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
     }
-    form input:focus, form select:focus, form button:focus {
+
+    form input:focus, form select:focus {
       outline: none;
-      border-color: var(--receipt-header);
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2); /* Focus glow */
     }
-    form button {
-      background: var(--receipt-header);
+
+    form button[type="submit"] {
+      background: var(--primary-color);
       color: #fff;
       border: none;
+      padding: 14px 25px; /* Generous padding */
+      border-radius: 6px;
       cursor: pointer;
-      transition: background 0.3s ease;
-      margin-top: 10px;
+      font-size: 1.1em;
+      font-weight: 600;
+      transition: background 0.3s ease, transform 0.2s ease;
+      margin-top: 15px;
+      width: 100%;
     }
-    form button:hover {
-      background: #425958;
+
+    form button[type="submit"]:hover {
+      background: var(--button-hover);
+      transform: translateY(-2px); /* Slight lift effect */
     }
-    /* Summary and function buttons container */
+
+    /* Summary Section */
     #summary {
-      background: #fff;
-      padding: 15px;
-      border-radius: 8px;
+      background: var(--card-background);
+      padding: 20px;
+      border-radius: 10px;
       text-align: center;
-      border: 1px solid var(--light-bg);
-      margin-bottom: 20px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 25px;
       display: flex;
       justify-content: space-around;
       flex-wrap: wrap;
+      box-shadow: 0 5px 15px var(--shadow-light);
     }
+
     #summary p {
-      margin: 5px;
-      font-size: 16px;
+      margin: 8px 15px; /* More margin */
+      font-size: 1.1em;
+      font-weight: 600;
+      color: var(--text-dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    /* Function buttons (download and clear) */
+
+    #summary p strong {
+        color: var(--text-light);
+        font-weight: 400;
+    }
+
+    #summary span {
+      font-size: 1.2em;
+      font-weight: 700;
+      color: var(--primary-color); /* Highlight totals */
+    }
+
+    #totalPaid {
+      color: var(--success-color);
+    }
+
+    #totalDue {
+      color: var(--danger-color);
+    }
+
+    /* Function Buttons */
     #function-buttons {
-      margin-bottom: 15px;
       text-align: right;
-      padding: 0 10px;
+      padding: 0 10px; /* Keep consistent padding */
+      margin-bottom: 25px;
     }
-    .download-btn, .clear-btn {
-      background-color: var(--function-btn);
-      color: #fff;
+
+    .action-btn { /* Unified class for download/clear buttons */
+      background-color: var(--secondary-color);
+      color: var(--text-dark); /* Dark text on yellow */
       border: none;
-      padding: 10px 16px;
-      border-radius: 5px;
+      padding: 12px 20px;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 14px;
-      margin-left: 10px;
-      transition: background 0.3s ease;
+      font-size: 0.95em;
+      font-weight: 600;
+      margin-left: 15px;
+      transition: background 0.3s ease, transform 0.2s ease;
+      box-shadow: 0 2px 5px var(--shadow-light);
     }
-    .download-btn:hover, .clear-btn:hover {
+
+    .action-btn.clear-btn {
+      background-color: var(--danger-color);
+      color: #fff;
+    }
+
+    .action-btn:hover {
       opacity: 0.9;
+      transform: translateY(-2px);
     }
-    /* Table styling – fully contained in the receipt */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: #fff;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 12px;
-      text-align: center;
-      font-size: 14px;
-    }
-    th {
-      background: var(--table-header);
-      color: #fff;
-      text-transform: uppercase;
-      cursor: pointer;
-    }
-    tr:nth-child(even) {
-      background: var(--light-bg);
-    }
-    /* Table action buttons – status and delete colors remain unchanged */
-    .status-btn, .delete-btn {
-      padding: 8px 12px;
-      border: none;
-      border-radius: 4px;
-      color: #fff;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    .status-btn.due {
-      background-color: #e74c3c;
-    }
-    .status-btn.paid {
-      background-color: #27ae60;
-    }
-    .delete-btn {
+
+    .action-btn.clear-btn:hover {
       background-color: #c0392b;
     }
-    .delete-btn:hover {
-      background-color: #a93226;
+
+    /* Table Styling */
+    table {
+      width: 100%;
+      border-collapse: separate; /* For rounded corners on cells */
+      border-spacing: 0;
+      background: var(--card-background);
+      border-radius: 10px;
+      overflow: hidden; /* Ensures rounded corners are visible */
+      box-shadow: 0 5px 15px var(--shadow-light);
+      margin-bottom: 20px;
     }
-    @media (max-width: 600px) {
+
+    th, td {
+      border: 1px solid var(--border-color);
+      padding: 15px;
+      text-align: center;
+      font-size: 0.95em;
+    }
+
+    th {
+      background: var(--primary-color);
+      color: #fff;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    th:first-child { border-top-left-radius: 8px; }
+    th:last-child { border-top-right-radius: 8px; }
+
+    tr:nth-child(even) {
+      background: var(--background-light); /* Lighter stripe for even rows */
+    }
+
+    tr:hover {
+        background-color: rgba(76, 175, 80, 0.1); /* Subtle hover effect on rows */
+    }
+
+    /* Table Action Buttons */
+    .status-btn {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 5px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.9em;
+      font-weight: 600;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    .status-btn.due {
+      background-color: var(--danger-color);
+    }
+
+    .status-btn.paid {
+      background-color: var(--success-color);
+    }
+
+    .status-btn:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .remove-item-btn {
+      background: var(--danger-color);
+      color: #fff;
+      border: none;
+      border-radius: 50%; /* Make it circular */
+      width: 28px; /* Fixed width */
+      height: 28px; /* Fixed height */
+      font-size: 1.2em; /* Larger 'x' */
+      line-height: 28px; /* Vertically center 'x' */
+      text-align: center;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      display: inline-block; /* Allows width/height to apply */
+      font-weight: bold;
+      vertical-align: middle;
+    }
+
+    .remove-item-btn:hover {
+      background-color: #c0392b; /* Darker red on hover */
+      transform: scale(1.1); /* Slightly enlarge */
+    }
+
+    /* Inline Edit Inputs */
+    td input[type="text"], td input[type="number"], td input[type="date"], td select {
+      border: 1px solid var(--primary-color);
+      border-radius: 4px;
+      padding: 5px 8px;
+      font-size: 0.9em;
+      width: auto; /* Allow content to dictate width, min-width set by JS */
+      min-width: 80px;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* File Upload Section */
+    #file-upload-section {
+        background: var(--card-background);
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px var(--shadow-light);
+        margin-top: 25px; /* Spacing from the form */
+        border: 1px solid var(--border-color);
+        text-align: center;
+    }
+
+    #file-upload-section h3 {
+        color: var(--primary-color);
+        margin-bottom: 20px;
+        font-size: 1.3em;
+    }
+
+    #file-input {
+        display: block;
+        width: calc(100% - 20px); /* Adjust width for padding */
+        margin: 0 auto 15px auto;
+        padding: 10px;
+        border: 1px dashed var(--border-color);
+        border-radius: 8px;
+        background-color: var(--background-light);
+        color: var(--text-dark);
+        cursor: pointer;
+    }
+
+    #upload-file-btn {
+        background: var(--secondary-color);
+        color: var(--text-dark);
+        border: none;
+        padding: 12px 25px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1em;
+        font-weight: 600;
+        transition: background 0.3s ease, transform 0.2s ease;
+    }
+
+    #upload-file-btn:hover {
+        background: #e6b000; /* Darker yellow */
+        transform: translateY(-2px);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
       .app-container {
         flex-direction: column;
+        padding: 20px;
+      }
+      .receipt-container {
+        margin: 10px auto;
+        border-radius: 8px;
+      }
+      h1 {
+        font-size: 2em;
+        padding: 20px 0;
+      }
+      form, #summary, #file-upload-section {
+        padding: 20px;
+        border-radius: 8px;
       }
       #function-buttons {
         text-align: center;
+        margin-bottom: 20px;
+      }
+      .action-btn {
+        margin: 5px;
+        width: calc(50% - 10px); /* Two buttons per row */
+      }
+      table, th, td {
+        display: block; /* Stack table elements on small screens */
+        width: 100%;
+      }
+      th {
+        text-align: left;
+        padding: 10px 15px;
+        border-bottom: none;
+      }
+      td {
+        text-align: right;
+        padding: 8px 15px;
+        position: relative;
+        padding-left: 50%; /* Space for pseudo-element label */
+        border-bottom: none;
+      }
+      td:before { /* Add labels for table cells */
+        content: attr(data-label);
+        position: absolute;
+        left: 15px;
+        width: calc(50% - 30px);
+        text-align: left;
+        font-weight: 600;
+        color: var(--text-dark);
+      }
+      /* Specific labels for each cell */
+      td:nth-of-type(1):before { content: "Biller:"; }
+      td:nth-of-type(2):before { content: "Amount:"; }
+      td:nth-of-type(3):before { content: "Due Date:"; }
+      td:nth-of-type(4):before { content: "Status:"; }
+      td:nth-of-type(5):before { content: "Action:"; }
+
+      tr {
+        margin-bottom: 15px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        box-shadow: 0 2px 8px var(--shadow-light);
+        display: block;
+        padding-bottom: 10px;
+      }
+
+      th:first-child, th:last-child { border-radius: 0; }
+      table { border-radius: 0; box-shadow: none;}
+    }
+
+    @media (max-width: 480px) {
+      .action-btn {
+        width: 100%; /* Stack buttons on very small screens */
+        margin-left: 0;
+        margin-bottom: 10px;
+      }
+      #file-input {
+        width: 100%;
       }
     }
   </style>
@@ -187,44 +445,45 @@
   <div class="receipt-container">
     <h1 id="receiptTitle">MONTH OF ...</h1>
     <div class="app-container">
-      <!-- Left Panel: Form to add a payable -->
       <div class="left-panel">
         <form id="payable-form">
           <div class="form-group">
             <label for="biller">Select Biller</label>
             <select id="biller" required>
               <option value="" disabled selected>--Select a biller--</option>
-              <!-- Sorted vendor options -->
-			             <option value="7 Eleven">7 Eleven</option>
-                                  <option value="Baby sitting">Baby sitting</option>
-                                  <option value="BDO Credit Card">BDO Credit Card</option>
-                                  <option value="BPI">BPI</option>
-                                  <option value="Cebuana Lhuillier">Cebuana Lhuillier</option>
-                                  <option value="DITO">DITO</option>
-                                  <option value="GCash Loan">GCash Loan</option>
-                                  <option value="Globe">Globe</option>
-                                  <option value="Gomo">Gomo</option>
-                                  <option value="LBC Express">LBC Express</option>
-                                  <option value="Manila Water">Manila Water</option>
-                                  <option value="Maynilad">Maynilad</option>
-                                  <option value="MECO">MECO</option>
-                                  <option value="Meralco">Meralco</option>
-                                  <option value="Metrobank">Metrobank</option>
-                                  <option value="Motorcycle">Motorcycle</option>
-                                  <option value="Netflix">Netflix</option>
-                                  <option value="Other">Other Expenses</option>
-                                  <option value="PLDT">PLDT</option>
-                                  <option value="Quickstop">Quickstop</option>
-                                  <option value="RCBC">RCBC</option>
-                                  <option value="Seabank">Seabank</option>
-                                  <option value="Security Bank">Security Bank</option>
-                                  <option value="SLoan">SLoan</option>
-                                  <option value="Smart">Smart</option>
-                                  <option value="Spaylater">Spaylater</option>
-                                  <option value="Spotify">Spotify</option>
-                                  <option value="Starbucks">Starbucks</option>
-                                  <option value="UnionBank">UnionBank</option>
-                                  <option value="VECO">VECO</option>
+              <option value="7 Eleven">7 Eleven</option>
+              <option value="Baby sitting">Baby sitting</option>
+              <option value="BDO Credit Card">BDO Credit Card</option>
+              <option value="BPI">BPI</option>
+              <option value="Cebuana Lhuillier">Cebuana Lhuillier</option>
+              <option value="DITO">DITO</option>
+              <option value="GCash Loan">GCash Loan</option>
+              <option value="Globe">Globe</option>
+              <option value="Gomo">Gomo</option>
+              <option value="Laundry">Laundry</option>
+              <option value="LBC Express">LBC Express</option>
+              <option value="Mama Rechel">Mama Rechel</option>
+              <option value="Manila Water">Manila Water</option>
+              <option value="Maynilad">Maynilad</option>
+              <option value="MECO">MECO</option>
+              <option value="Meralco">Meralco</option>
+              <option value="Metrobank">Metrobank</option>
+              <option value="Motorcycle">Motorcycle</option>
+              <option value="Move it">Move it</option>
+              <option value="Netflix">Netflix</option>
+              <option value="Other">Other Expenses</option>
+              <option value="PLDT">PLDT</option>
+              <option value="Quickstop">Quickstop</option>
+              <option value="RCBC">RCBC</option>
+              <option value="Seabank">Seabank</option>
+              <option value="Security Bank">Security Bank</option>
+              <option value="SLoan">SLoan</option>
+              <option value="Smart">Smart</option>
+              <option value="Spaylater">Spaylater</option>
+              <option value="Spotify">Spotify</option>
+              <option value="Starbucks">Starbucks</option>
+              <option value="UnionBank">UnionBank</option>
+              <option value="VECO">VECO</option>
             </select>
           </div>
           <div class="form-group">
@@ -237,19 +496,24 @@
           </div>
           <button type="submit">Add Payable</button>
         </form>
+
+        <div id="file-upload-section">
+            <h3>Upload from Excel/CSV</h3>
+            <input type="file" id="file-input" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+            <button id="upload-file-btn">Upload File</button>
+        </div>
+
       </div>
-      <!-- Right Panel: Summary, function buttons, and table listing -->
       <div class="right-panel">
         <div id="summary">
-          <p><strong>Monthly Total:</strong> ₱<span id="totalMonthly">0.00</span></p>
-          <p><strong>Total Paid:</strong> ₱<span id="totalPaid">0.00</span></p>
-          <p><strong>Total Due:</strong> ₱<span id="totalDue">0.00</span></p>
+          <p>Monthly Total: ₱<span id="totalMonthly">0.00</span></p>
+          <p>Total Paid: ₱<span id="totalPaid">0.00</span></p>
+          <p>Total Due: ₱<span id="totalDue">0.00</span></p>
         </div>
         <div id="function-buttons">
-          <button class="download-btn" id="downloadBtn">Download as Text</button>
-          <button class="clear-btn" id="clearBtn">Clear All</button>
+          <button class="action-btn" id="downloadBtn">Download as Text</button>
+          <button class="action-btn clear-btn" id="clearBtn">Clear All</button>
         </div>
-        <!-- Table fully contained and aligned inside the receipt -->
         <table>
           <thead>
             <tr>
@@ -257,11 +521,10 @@
               <th data-sort-field="amount">Amount</th>
               <th data-sort-field="dueDate">Due Date</th>
               <th data-sort-field="paid">Status</th>
-              <th>Delete</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody id="payable-list">
-            <!-- Dynamic rows will be inserted here -->
           </tbody>
         </table>
       </div>
@@ -269,17 +532,17 @@
   </div>
   <script>
     // --- Dynamic Month Updates ---
-    // Define month names and get the current month.
     const monthNames = [
       "January", "February", "March", "April", "May", "June",
       "July", "August", "September", "October", "November", "December"
     ];
     const now = new Date();
-    const currentMonthName = monthNames[now.getMonth()];
-    
-    // Update the document title and the H1 header.
-    document.title = "Receipt - MONTH OF " + currentMonthName.toUpperCase();
-    document.getElementById("receiptTitle").innerText = "MONTH OF " + currentMonthName.toUpperCase();
+    const currentMonthIndex = now.getMonth();
+    const currentMonthName = monthNames[currentMonthIndex];
+    const currentYear = now.getFullYear();
+
+    document.title = `Receipt - MONTH OF ${currentMonthName.toUpperCase()} ${currentYear}`;
+    document.getElementById("receiptTitle").innerText = `MONTH OF ${currentMonthName.toUpperCase()} ${currentYear}`;
 
     // --- Global Data and Variables ---
     const STORAGE_KEY = 'payables';
@@ -287,14 +550,13 @@
     let currentSortField = null;
     let currentSortDirection = 1; // 1 = ascending; -1 = descending
 
-    // Vendor options for inline editing (sorted and matching form choices)
     const vendorOptions = [
-      "BDO Credit Card", "BPI", "Cebuana Lhuillier", "DITO", "Globe",
-      "GCash Loan", "Gomo", "LBC Express", "Manila Water", "Maynilad",
-      "MECO", "Meralco", "Metrobank", "Netflix", "PLDT", "RCBC",
-      "Seabank", "Security Bank", "SLoan", "Smart", "Spaylater",
-      "Spotify", "UnionBank", "VECO"
-    ];
+      "7 Eleven", "Baby sitting", "BDO Credit Card", "BPI", "Cebuana Lhuillier",
+      "DITO", "GCash Loan", "Globe", "Gomo", "Laundry", "LBC Express", "Mama Rechel", "Manila Water",
+      "Maynilad", "MECO", "Meralco", "Metrobank", "Motorcycle", "Move it", "Netflix",
+      "Other", "PLDT", "Quickstop", "RCBC", "Seabank", "Security Bank",
+      "SLoan", "Smart", "Spaylater", "Spotify", "Starbucks", "UnionBank", "VECO"
+    ].sort(); // Ensure vendor options are sorted
 
     // DOM Elements
     const form = document.getElementById('payable-form');
@@ -307,6 +569,9 @@
     const totalDueEl = document.getElementById('totalDue');
     const downloadBtn = document.getElementById('downloadBtn');
     const clearBtn = document.getElementById('clearBtn');
+    const fileInput = document.getElementById('file-input');
+    const uploadFileBtn = document.getElementById('upload-file-btn');
+
 
     // Save payables to localStorage
     function savePayables() {
@@ -316,126 +581,174 @@
     // Format a date string (assumed "YYYY-MM-DD") to M/D/YYYY
     function formatDate(dateStr) {
       if (!dateStr) return '';
-      const dateObj = new Date(dateStr);
+      const dateObj = new Date(dateStr + 'T00:00:00'); // Add T00:00:00 to prevent timezone issues
       const month = dateObj.getMonth() + 1;
       const day = dateObj.getDate();
       const year = dateObj.getFullYear();
-      return month + '/' + day + '/' + year;
+      return `${month}/${day}/${year}`;
     }
 
-    // Update summary totals from the current list
+    // --- NEW: Monthly Total Calculation Logic for June ---
     function updateTotals() {
-      let totalMonthly = 0, totalPaid = 0, totalDue = 0;
-      payables.forEach(item => {
-        const amt = parseFloat(item.amount);
-        totalMonthly += amt;
-        if (item.paid) {
-          totalPaid += amt;
-        } else {
-          totalDue += amt;
-        }
-      });
-      totalMonthlyEl.innerText = totalMonthly.toFixed(2);
-      totalPaidEl.innerText = totalPaid.toFixed(2);
-      totalDueEl.innerText = totalDue.toFixed(2);
+        let currentMonthTotal = 0; // Charges incurred in the current month (June)
+        let totalPaidOverall = 0; // Total paid, including May carryover if due in June
+        let totalDueOverall = 0; // Total due, including May carryover if due in June
+
+        const currentMonthStartDate = new Date(currentYear, currentMonthIndex, 1);
+        const nextMonthStartDate = new Date(currentYear, currentMonthIndex + 1, 1);
+
+        payables.forEach(item => {
+            const amt = parseFloat(item.amount);
+            const itemDueDate = new Date(item.dueDate + 'T00:00:00');
+
+            // 1. Calculate Monthly Total (charges incurred in June)
+            // This assumes "incurred in June" means the due date is in June.
+            // If "incurred" has a different meaning (e.g., transaction date), this logic needs adjustment.
+            if (itemDueDate >= currentMonthStartDate && itemDueDate < nextMonthStartDate) {
+                currentMonthTotal += amt;
+            }
+
+            // 2. Calculate Total Paid and Total Due (with May carryover logic for June)
+            // This logic is specifically for June, considering May carryover.
+            // For other months, it just sums paid/due for that month.
+            if (currentMonthName === "June") {
+                const mayDueDateStart = new Date(currentYear, 4, 1); // May 1st of current year
+                const mayDueDateEnd = new Date(currentYear, 5, 0); // Last day of May
+
+                const isMayCarryover = itemDueDate >= mayDueDateStart && itemDueDate <= mayDueDateEnd && !item.paid;
+                const isDueInCurrentMonth = itemDueDate >= currentMonthStartDate && itemDueDate < nextMonthStartDate;
+
+                if (isMayCarryover || isDueInCurrentMonth) {
+                    if (item.paid) {
+                        totalPaidOverall += amt;
+                    } else {
+                        totalDueOverall += amt;
+                    }
+                }
+            } else {
+                // For other months, simpler logic: current month's paid/due
+                if (itemDueDate >= currentMonthStartDate && itemDueDate < nextMonthStartDate) {
+                    if (item.paid) {
+                        totalPaidOverall += amt;
+                    } else {
+                        totalDueOverall += amt;
+                    }
+                }
+            }
+        });
+
+        totalMonthlyEl.innerText = currentMonthTotal.toFixed(2);
+        totalPaidEl.innerText = totalPaidOverall.toFixed(2);
+        totalDueEl.innerText = totalDueOverall.toFixed(2);
     }
 
-    // Inline editing helper: make a table cell editable without shifting the layout.
+    // Inline editing helper
     function makeCellEditable(td, field, item) {
-      const currentWidth = td.offsetWidth;
-      td.style.minWidth = currentWidth + "px";
       const originalValue = item[field];
+      let inputElement;
+
       if (field === "biller") {
-        const select = document.createElement("select");
-        select.style.width = currentWidth + "px";
+        inputElement = document.createElement("select");
         vendorOptions.forEach(opt => {
           const option = document.createElement("option");
           option.value = opt;
           option.text = opt;
           if (opt === originalValue) option.selected = true;
-          select.appendChild(option);
+          inputElement.appendChild(option);
         });
-        select.addEventListener("blur", () => {
-          item[field] = select.value;
-          td.style.minWidth = "";
-          savePayables();
-          renderPayables();
-        });
-        td.innerHTML = "";
-        td.appendChild(select);
-        select.focus();
       } else if (field === "amount") {
-        const input = document.createElement("input");
-        input.type = "number";
-        input.step = "0.01";
-        input.value = originalValue;
-        input.style.width = currentWidth + "px";
-        input.addEventListener("blur", () => {
-          item[field] = parseFloat(input.value).toFixed(2);
-          td.style.minWidth = "";
-          savePayables();
-          renderPayables();
-        });
-        td.innerHTML = "";
-        td.appendChild(input);
-        input.focus();
+        inputElement = document.createElement("input");
+        inputElement.type = "number";
+        inputElement.step = "0.01";
+        inputElement.value = originalValue;
       } else if (field === "dueDate") {
-        const input = document.createElement("input");
-        input.type = "date";
-        input.value = originalValue;
-        input.style.width = currentWidth + "px";
-        input.addEventListener("blur", () => {
-          item[field] = input.value;
-          td.style.minWidth = "";
-          savePayables();
-          renderPayables();
-        });
-        td.innerHTML = "";
-        td.appendChild(input);
-        input.focus();
+        inputElement = document.createElement("input");
+        inputElement.type = "date";
+        inputElement.value = originalValue;
       }
+
+      // Preserve current cell size during editing
+      const currentWidth = td.offsetWidth;
+      const currentHeight = td.offsetHeight;
+      td.style.width = currentWidth + "px";
+      td.style.height = currentHeight + "px";
+      td.innerHTML = ""; // Clear existing content
+      td.appendChild(inputElement);
+      inputElement.focus();
+
+      const saveChanges = () => {
+        let newValue;
+        if (field === "amount") {
+          newValue = parseFloat(inputElement.value).toFixed(2);
+          if (isNaN(newValue)) newValue = originalValue; // Revert if not a number
+        } else {
+          newValue = inputElement.value;
+        }
+
+        // Only update if value has changed
+        if (item[field] !== newValue) {
+            item[field] = newValue;
+            savePayables();
+            renderPayables(); // Re-render to update the display
+        }
+        td.style.width = ""; // Reset dimensions
+        td.style.height = "";
+      };
+
+      inputElement.addEventListener("blur", saveChanges);
+      inputElement.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          inputElement.blur(); // Trigger blur to save changes
+        }
+      });
     }
 
-    // Render table rows (with inline editing support)
+    // Render table rows
     function renderPayables() {
+      // Sort the payables array
       if (currentSortField) {
         payables.sort((a, b) => {
-          let valA = a[currentSortField], valB = b[currentSortField];
+          let valA = a[currentSortField];
+          let valB = b[currentSortField];
+
           if (currentSortField === "amount") {
             return currentSortDirection * (parseFloat(valA) - parseFloat(valB));
           } else if (currentSortField === "dueDate") {
+            // Compare dates as Date objects
             return currentSortDirection * (new Date(valA) - new Date(valB));
           } else if (currentSortField === "biller") {
             return currentSortDirection * valA.localeCompare(valB);
           } else if (currentSortField === "paid") {
+            // Sort boolean: false (due) before true (paid) for ascending
             return currentSortDirection * ((a.paid ? 1 : 0) - (b.paid ? 1 : 0));
           }
           return 0;
         });
       }
-      payableListEl.innerHTML = "";
-      payables.forEach(item => {
+
+      payableListEl.innerHTML = ""; // Clear existing rows
+      payables.forEach((item, index) => { // Added index for delete button
         const tr = document.createElement("tr");
 
-        // Vendor cell with inline editing on double-click
+        // Use data-label for responsive table headings
         const tdBiller = document.createElement("td");
         tdBiller.innerText = item.biller;
+        tdBiller.dataset.label = "Biller:";
         tdBiller.ondblclick = () => makeCellEditable(tdBiller, "biller", item);
         tr.appendChild(tdBiller);
 
-        // Amount cell with inline editing
         const tdAmount = document.createElement("td");
         tdAmount.innerText = "₱" + parseFloat(item.amount).toFixed(2);
+        tdAmount.dataset.label = "Amount:";
         tdAmount.ondblclick = () => makeCellEditable(tdAmount, "amount", item);
         tr.appendChild(tdAmount);
 
-        // Due Date cell with inline editing
         const tdDueDate = document.createElement("td");
         tdDueDate.innerText = formatDate(item.dueDate);
+        tdDueDate.dataset.label = "Due Date:";
         tdDueDate.ondblclick = () => makeCellEditable(tdDueDate, "dueDate", item);
         tr.appendChild(tdDueDate);
 
-        // Status cell with toggle button
         const tdStatus = document.createElement("td");
         const statusBtn = document.createElement("button");
         statusBtn.classList.add("status-btn");
@@ -450,28 +763,32 @@
           item.paid = !item.paid;
           savePayables();
           renderPayables();
-          updateTotals();
         });
         tdStatus.appendChild(statusBtn);
+        tdStatus.dataset.label = "Status:";
         tr.appendChild(tdStatus);
 
-        // Delete cell with delete button
-        const tdDelete = document.createElement("td");
-        const deleteBtn = document.createElement("button");
-        deleteBtn.classList.add("delete-btn");
-        deleteBtn.innerText = "Delete";
-        deleteBtn.addEventListener("click", () => {
-          payables = payables.filter(p => p.id !== item.id);
-          savePayables();
-          renderPayables();
-          updateTotals();
+        const tdActions = document.createElement("td");
+        const deleteBtn = document.createElement("span");
+        deleteBtn.classList.add("remove-item-btn");
+        deleteBtn.dataset.index = index; // Use data-index for easy identification
+        deleteBtn.title = "Remove Item";
+        deleteBtn.innerText = "×"; // The multiplication sign character
+        deleteBtn.addEventListener("click", (event) => {
+          const itemIndex = parseInt(event.target.dataset.index);
+          if (confirm(`Are you sure you want to delete the payable for ${payables[itemIndex].biller}?`)) {
+            payables.splice(itemIndex, 1); // Remove item by index
+            savePayables();
+            renderPayables();
+          }
         });
-        tdDelete.appendChild(deleteBtn);
-        tr.appendChild(tdDelete);
+        tdActions.appendChild(deleteBtn);
+        tdActions.dataset.label = "Actions:";
+        tr.appendChild(tdActions);
 
         payableListEl.appendChild(tr);
       });
-      updateTotals();
+      updateTotals(); // Always update totals after rendering rows
     }
 
     // Attach click listeners to table headers for sorting.
@@ -479,34 +796,34 @@
       header.addEventListener("click", () => {
         const field = header.getAttribute("data-sort-field");
         if (currentSortField === field) {
-          currentSortDirection = -currentSortDirection;
+          currentSortDirection = -currentSortDirection; // Toggle direction
         } else {
           currentSortField = field;
-          currentSortDirection = 1;
+          currentSortDirection = 1; // Default to ascending
         }
         renderPayables();
       });
     });
 
-    // Function to download the current payables as a text receipt.
+    // Function to download the current payables as plain text (CSV-like)
     function downloadAsText() {
-      let content = "MONTH OF " + currentMonthName.toUpperCase() + "\n\n";
-      content += "Vendor\tAmount\tDue Date\tStatus\n";
+      let content = `Biller,Amount,Due Date,Status\n`; // CSV header
       payables.forEach(item => {
-        content += `${item.biller}\t₱${parseFloat(item.amount).toFixed(2)}\t${formatDate(item.dueDate)}\t${item.paid ? "Settled/Done" : "Due"}\n`;
+        const status = item.paid ? "Settled/Done" : "Due";
+        content += `${item.biller},${parseFloat(item.amount).toFixed(2)},${item.dueDate},${status}\n`;
       });
       const blob = new Blob([content], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "Month of " + currentMonthName + ".txt";
+      a.download = `Payables_${currentMonthName}_${currentYear}.csv`; // Change to CSV extension
       a.click();
       URL.revokeObjectURL(url);
     }
 
     // Function to clear all payables after confirmation.
     function clearAll() {
-      if (confirm("Are you sure you want to clear all payables?")) {
+      if (confirm("Are you sure you want to clear ALL payables? This action cannot be undone.")) {
         payables = [];
         savePayables();
         renderPayables();
@@ -517,16 +834,18 @@
     form.addEventListener("submit", e => {
       e.preventDefault();
       const biller = billerSelect.value;
-      const amount = parseFloat(amountInput.value).toFixed(2);
+      const amount = parseFloat(amountInput.value); // Parse as float
       const dueDate = dueDateInput.value;
-      if (!biller || isNaN(amount) || !dueDate) {
-        alert("Please fill in all required fields correctly.");
+
+      if (!biller || isNaN(amount) || amount <= 0 || !dueDate) {
+        alert("Please ensure all fields are filled correctly, and the amount is a positive number.");
         return;
       }
+
       const newPayable = {
-        id: Date.now(),
+        id: Date.now(), // Unique ID for each item
         biller,
-        amount,
+        amount: amount.toFixed(2), // Store as fixed 2 decimal string
         dueDate,
         paid: false
       };
@@ -534,7 +853,136 @@
       savePayables();
       renderPayables();
       form.reset();
-      billerSelect.selectedIndex = 0;
+      billerSelect.selectedIndex = 0; // Reset select to default option
+    });
+
+    // --- File Upload Logic ---
+    function processUploadedData(data) {
+        const newPayables = [];
+        data.forEach(row => {
+            const biller = row.Biller || row.biller;
+            let amount = parseFloat(row["Amount Due Date"] || row.amount || 0); // Handle "Amount Due Date" as amount
+            let dueDate = row["Due Date"] || row.dueDate;
+            let status = row.Status || row.status;
+
+            // Basic validation and type conversion
+            if (biller && !isNaN(amount) && amount > 0 && dueDate) {
+                // Try to parse various date formats. If it's a number (Excel date), convert it.
+                if (typeof dueDate === 'number') {
+                    // Excel dates are days since 1900-01-01 (or 1904-01-01 for Mac Excel)
+                    // Assuming Windows Excel (1900-based)
+                    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+                    dueDate = new Date(excelEpoch.getTime() + (dueDate * 24 * 60 * 60 * 1000));
+                    dueDate = dueDate.toISOString().split('T')[0]; // Format to YYYY-MM-DD
+                } else {
+                    // Attempt to parse string date (e.g., "MM/DD/YYYY", "YYYY-MM-DD")
+                    try {
+                        const dateObj = new Date(dueDate);
+                        if (!isNaN(dateObj.getTime())) {
+                            dueDate = dateObj.toISOString().split('T')[0];
+                        } else {
+                            dueDate = ''; // Invalid date, skip
+                        }
+                    } catch (e) {
+                        dueDate = ''; // Invalid date, skip
+                    }
+                }
+
+                if (dueDate) { // Only add if dueDate is valid
+                    newPayables.push({
+                        id: Date.now() + Math.random(), // Ensure unique ID
+                        biller: String(biller),
+                        amount: amount.toFixed(2),
+                        dueDate: String(dueDate),
+                        paid: status && (status.toLowerCase() === 'settled' || status.toLowerCase() === 'done' || status.toLowerCase() === 'paid')
+                    });
+                }
+            }
+        });
+
+        if (newPayables.length > 0) {
+            payables = payables.concat(newPayables);
+            savePayables();
+            renderPayables();
+            alert(`${newPayables.length} items successfully added from file.`);
+        } else {
+            alert("No valid payable items found in the file. Please ensure columns 'Biller', 'Amount Due Date' (or 'Amount'), and 'Due Date' exist and contain valid data.");
+        }
+    }
+
+    // Parse CSV content
+    function parseCSV(text) {
+        const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
+        if (lines.length === 0) return [];
+
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const data = [];
+
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',');
+            const row = {};
+            headers.forEach((header, index) => {
+                row[header] = values[index] ? values[index].trim() : '';
+            });
+            data.push(row);
+        }
+        return data;
+    }
+
+    // Parse Excel content using SheetJS (xlsx)
+    function parseExcel(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet, { raw: false, defval: null }); // raw:false to get formatted dates
+                    resolve(json);
+                } catch (error) {
+                    reject(new Error("Error parsing Excel file: " + error.message));
+                }
+            };
+            reader.onerror = (error) => reject(new Error("Failed to read file: " + error));
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    // Handle file input change
+    fileInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (!file) {
+            return;
+        }
+
+        const fileName = file.name;
+        const fileExtension = fileName.split('.').pop().toLowerCase();
+
+        if (fileExtension === 'csv') {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target.result;
+                const data = parseCSV(text);
+                processUploadedData(data);
+            };
+            reader.onerror = () => {
+                alert("Failed to read CSV file.");
+            };
+            reader.readAsText(file);
+        } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+            parseExcel(file)
+                .then(data => processUploadedData(data))
+                .catch(error => alert(error.message));
+        } else {
+            alert("Unsupported file type. Please upload a CSV or Excel (.xlsx, .xls) file.");
+        }
+    });
+
+    // Attach event listener to the upload button (optional, can also use fileInput 'change')
+    uploadFileBtn.addEventListener('click', () => {
+        fileInput.click(); // Programmatically click the hidden file input
     });
 
     // Attach event listeners to the download and clear buttons.
