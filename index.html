@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payables & Expenses</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text x='0' y='14' font-size='16'>₱</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #4CAF50;
+      --secondary-color: #FFC107;
+      --tertiary-color: #2196F3;
+      --background-light: #F4F6F8;
+      --card-background: #FFFFFF;
+      --text-dark: #333333;
+      --text-light: #666666;
+      --border-color: #E0E0E0;
+      --success-color: #28A745;
+      --danger-color: #DC3545;
+      --overdue-color: #ff7600;
+      --button-hover: #45a049;
+      --shadow-light: rgba(0, 0, 0, 0.08);
+      --shadow-medium: rgba(0, 0, 0, 0.15);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--background-light);
+      font-family: 'Poppins', sans-serif;
+      color: var(--text-dark);
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .receipt-container {
+      max-width: 1400px;
+      margin: 20px auto;
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--card-background);
+      box-shadow: 0 10px 30px var(--shadow-medium);
+    }
+    h1, h2 {
+      text-align: center;
+      color: #fff;
+      padding: 25px 0;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-shadow: 1px 1px 2px var(--shadow-medium);
+    }
+    h1 { background: var(--primary-color); font-size: 2.5em; margin:0; }
+    h2 {
+        font-size: 1.5em;
+        margin-top: 40px;
+        padding: 15px 0;
+        border-radius: 8px 8px 0 0;
+    }
+    .due-header { background: var(--danger-color); }
+    .settled-header { background: var(--success-color); }
+    .upcoming-header { background: var(--tertiary-color); }
+    
+    .app-container { display: flex; gap: 30px; flex-wrap: wrap; padding: 30px; }
+    .left-panel, .right-panel { flex: 1; min-width: 350px; }
+    .left-panel { max-width: 450px; }
+    form {
+      background: var(--card-background);
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px var(--shadow-light);
+      margin-bottom: 25px;
+      border: 1px solid var(--border-color);
+    }
+    .form-group { margin-bottom: 20px; }
+    form label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.95em; }
+    form input, form select, form textarea {
+      width: 100%;
+      padding: 12px 15px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 1em;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    form input:focus, form select:focus, form textarea:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+    }
+    form button[type="submit"] {
+      background: var(--primary-color); color: #fff; border: none; padding: 14px 25px;
+      border-radius: 6px; cursor: pointer; font-size: 1.1em; font-weight: 600;
+      transition: background 0.3s ease, transform 0.2s ease; margin-top: 15px; width: 100%;
+    }
+    form button[type="submit"]:hover { background: var(--button-hover); transform: translateY(-2px); }
+    #summary, .total-row {
+      background: var(--card-background); padding: 20px; border-radius: 10px;
+      border: 1px solid var(--border-color); margin-bottom: 25px;
+      display: flex; justify-content: space-around; flex-wrap: wrap;
+      box-shadow: 0 5px 15px var(--shadow-light);
+    }
+    #summary p, .total-row p { margin: 8px 15px; font-size: 1.1em; font-weight: 600; }
+    #summary span, .total-row span { font-size: 1.2em; font-weight: 700; color: var(--primary-color); }
+    #totalPaid { color: var(--success-color); }
+    #totalDue { color: var(--danger-color); }
+    #function-buttons { text-align: right; padding: 0 10px; margin-bottom: 25px; }
+    .action-btn {
+      background-color: var(--secondary-color); color: var(--text-dark); border: none;
+      padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 0.95em;
+      font-weight: 600; margin-left: 15px; transition: background 0.3s ease, transform 0.2s ease;
+      box-shadow: 0 2px 5px var(--shadow-light);
+    }
+    .action-btn.clear-btn { background-color: var(--danger-color); color: #fff; }
+    .action-btn:hover { opacity: 0.9; transform: translateY(-2px); }
+    table {
+      width: 100%; border-collapse: collapse; background: var(--card-background);
+      overflow: hidden; box-shadow: 0 5px 15px var(--shadow-light);
+    }
+    .table-container { margin-bottom: 40px; }
+    #settled-table, #next-month-table { border-radius: 0 0 10px 10px; }
+    #due-table { border-radius: 10px 10px 0 0; }
+
+    th, td { padding: 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
+    th {
+      background: var(--primary-color); color: #fff; text-transform: uppercase;
+      font-weight: 600; letter-spacing: 0.5px; position: sticky; top: 0; z-index: 10;
+    }
+    #due-table thead th { background-color: var(--danger-color); }
+    #settled-table thead th { background-color: var(--success-color); }
+    #next-month-table thead th { background-color: var(--tertiary-color); }
+    tr:nth-child(even) { background: var(--background-light); }
+    tr:hover { background-color: rgba(76, 175, 80, 0.1); }
+    .status-btn {
+      padding: 8px 14px; border: none; border-radius: 5px; color: #fff;
+      cursor: pointer; font-size: 0.9em; font-weight: 600; transition: background-color 0.3s ease;
+    }
+    .status-btn.due { background-color: var(--danger-color); }
+    .status-btn.overdue { background-color: var(--overdue-color); }
+    .remove-item-btn {
+      background: var(--danger-color); color: #fff; border: none; border-radius: 50%;
+      width: 28px; height: 28px; font-size: 1.2em; line-height: 28px; text-align: center;
+      cursor: pointer; transition: background-color 0.3s ease, transform 0.2s ease;
+      font-weight: bold; vertical-align: middle;
+    }
+    .remove-item-btn:hover { background-color: #c0392b; transform: scale(1.1); }
+    .tabs { margin-bottom: 20px; display: flex; border-bottom: 2px solid var(--border-color); }
+    .tab-link {
+        padding: 10px 20px; cursor: pointer; font-weight: 600; border: none;
+        background: none; font-size: 1.1em; border-bottom: 4px solid transparent;
+        transition: color 0.3s, border-color 0.3s;
+    }
+    .tab-link.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    #daily-summary { margin-top: 20px; text-align: center; font-size: 1.2em; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="receipt-container">
+    <h1>Payables & Expenses</h1>
+    <div class="app-container">
+      <div class="left-panel">
+        <form id="expense-form">
+          <div class="form-group">
+            <label for="biller">Biller/Expense</label>
+            <select id="biller" required>
+               <option value="" disabled selected>--Select a Biller--</option>
+              <option value="7 Eleven">7 Eleven</option>
+              <option value="Baby sitting">Baby sitting</option>
+              <option value="BDO Credit Card">BDO Credit Card</option>
+              <option value="BPI">BPI</option>
+              <option value="Cebuana Lhuillier">Cebuana Lhuillier</option>
+              <option value="DITO">DITO</option>
+              <option value="GCash Loan">GCash Loan</option>
+              <option value="Globe">Globe</option>
+              <option value="Gomo">Gomo</option>
+              <option value="Laundry">Laundry</option>
+              <option value="LBC Express">LBC Express</option>
+              <option value="Mama Rechel">Mama Rechel</option>
+              <option value="Manila Water">Manila Water</option>
+              <option value="Maynilad">Maynilad</option>
+              <option value="MECO">MECO</option>
+              <option value="Meralco">Meralco</option>
+              <option value="Metrobank">Metrobank</option>
+              <option value="Motorcycle">Motorcycle</option>
+              <option value="Move it">Move it</option>
+              <option value="Netflix">Netflix</option>
+              <option value="Other">Other Expenses</option>
+              <option value="PLDT">PLDT</option>
+              <option value="Quickstop">Quickstop</option>
+              <option value="RCBC">RCBC</option>
+              <option value="Seabank">Seabank</option>
+              <option value="Security Bank">Security Bank</option>
+              <option value="SLoan">SLoan</option>
+              <option value="Smart">Smart</option>
+              <option value="Spaylater">Spaylater</option>
+              <option value="Spotify">Spotify</option>
+              <option value="Starbucks">Starbucks</option>
+              <option value="UnionBank">UnionBank</option>
+              <option value="VECO">VECO</option>
+            </select>
+          </div>
+          <div class="form-group">
+              <label for="description">Description/Notes</label>
+              <textarea id="description" rows="2" placeholder="e.g., Internet bill for June, Groceries"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="amount">Amount (PHP)</label>
+            <input type="number" id="amount" placeholder="Enter total amount" min="0" step="0.01" required>
+          </div>
+           <div class="form-group">
+              <label for="purchaseDate">Date of Purchase/Spent</label>
+              <input type="date" id="purchaseDate" required>
+          </div>
+          <div class="form-group">
+            <label for="dueDate">Due Date</label>
+            <input type="date" id="dueDate" required>
+          </div>
+           <div class="form-group">
+              <label for="frequency">Payment Frequency</label>
+              <select id="frequency">
+                  <option value="one-time" selected>One-time</option>
+                  <option value="recurring">Recurring</option>
+                  <option value="lifetime">Lifetime</option>
+              </select>
+          </div>
+          <div id="recurring-options" style="display: none;">
+              <div class="form-group">
+                  <label for="installments">Number of Installments</label>
+                  <select id="installments">
+                      <option value="2">2 months</option>
+                      <option value="3">3 months</option>
+                      <option value="4">4 months</option>
+                      <option value="5">5 months</option>
+                      <option value="6">6 months</option>
+                      <option value="12">12 months</option>
+                  </select>
+              </div>
+          </div>
+          <div class="form-group">
+              <label for="status">Status</label>
+              <select id="status">
+                  <option value="due">Due</option>
+                  <option value="paid">Settled/Done</option>
+              </select>
+          </div>
+          <button type="submit">Add Expense</button>
+        </form>
+      </div>
+      <div class="right-panel">
+        <div class="tabs">
+            <button class="tab-link active" onclick="openTab(event, 'monthly')">Monthly Payables</button>
+            <button class="tab-link" onclick="openTab(event, 'daily')">Daily Expenses</button>
+        </div>
+
+        <div id="monthly" class="tab-content active">
+            <div id="summary">
+              <p>Total Assets: ₱<span id="totalMonthly">0.00</span></p>
+              <p>Total Paid: ₱<span id="totalPaid">0.00</span></p>
+              <p>Total Due: ₱<span id="totalDue">0.00</span></p>
+            </div>
+            <div id="function-buttons">
+              <button class="action-btn" id="uploadBtn">Upload CSV</button>
+              <input type="file" id="file-input" accept=".csv" style="display: none;"/>
+              <button class="action-btn" id="downloadBtn">Download as CSV</button>
+              <button class="action-btn clear-btn" id="clearBtn">Clear All</button>
+            </div>
+
+            <div class="table-container">
+                <h2 class="due-header">Due This Month</h2>
+                <table id="due-table">
+                  <thead><tr><th>Biller</th><th>Description</th><th>Amount</th><th>Due Date</th><th>Status</th><th>Actions</th></tr></thead>
+                  <tbody id="payable-list-due"></tbody>
+                </table>
+            </div>
+
+            <div class="table-container">
+                <h2 class="upcoming-header">Upcoming Payables (Next Month)</h2>
+                <table id="next-month-table">
+                  <thead><tr><th>Biller</th><th>Description</th><th>Amount</th><th>Due Date</th></tr></thead>
+                  <tbody id="payable-list-next-month"></tbody>
+                </table>
+                <div class="total-row"><p>Next Month's Total: <span id="nextMonthTotal">₱0.00</span></p></div>
+            </div>
+
+            <div class="table-container">
+                <h2 class="settled-header">Settled Items</h2>
+                <table id="settled-table">
+                    <thead><tr><th>Biller</th><th>Description</th><th>Amount</th><th>Date Paid</th><th>Actions</th></tr></thead>
+                    <tbody id="payable-list-settled"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="daily" class="tab-content">
+            <div id="daily-summary" class="total-row">
+                <p>Total Spent Today: <span id="dailyTotal">₱0.00</span></p>
+            </div>
+            <table>
+              <thead><tr><th>Description</th><th>Amount</th><th>Time</th><th>Actions</th></tr></thead>
+              <tbody id="daily-list"></tbody>
+            </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('expense-form');
+    const frequencySelect = document.getElementById('frequency');
+    const recurringOptions = document.getElementById('recurring-options');
+    const installmentsSelect = document.getElementById('installments');
+    const purchaseDateInput = document.getElementById('purchaseDate');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const fileInput = document.getElementById('file-input');
+    const clearBtn = document.getElementById('clearBtn');
+
+    let payables = JSON.parse(localStorage.getItem('payables_v6')) || [];
+    let dailyExpenses = JSON.parse(localStorage.getItem('dailyExpenses_v6')) || [];
+
+    const formatDate = (dateStr) => {
+        if (!dateStr) return 'N/A';
+        return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC' }).format(new Date(dateStr));
+    };
+    const formatCurrency = (amount) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
+
+    function openTab(evt, tabName) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-link').forEach(link => link.classList.remove('active'));
+        document.getElementById(tabName).classList.add('active');
+        evt.currentTarget.classList.add('active');
+    }
+
+    function saveAndRender() {
+        localStorage.setItem('payables_v6', JSON.stringify(payables));
+        localStorage.setItem('dailyExpenses_v6', JSON.stringify(dailyExpenses));
+        renderAll();
+    }
+    
+    function renderAll(){
+        renderPayables();
+        renderDailyExpenses();
+        updateSummaries();
+    }
+
+    function renderPayables() {
+        const dueListEl = document.getElementById('payable-list-due');
+        const settledListEl = document.getElementById('payable-list-settled');
+        const nextMonthListEl = document.getElementById('payable-list-next-month');
+        [dueListEl, settledListEl, nextMonthListEl].forEach(el => el.innerHTML = '');
+
+        const now = new Date();
+        const today = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+        const currentMonth = now.getUTCMonth();
+        const currentYear = now.getUTCFullYear();
+        const nextMonth = (currentMonth + 1) % 12;
+        const nextMonthYear = nextMonth === 0 ? currentYear + 1 : currentYear;
+
+        const duePayables = payables.filter(p => !p.paid)
+            .filter(p => {
+                 const dueDate = new Date(p.dueDate);
+                 return dueDate.getUTCMonth() === currentMonth && dueDate.getUTCFullYear() === currentYear;
+            }).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+        const nextMonthPayables = payables.filter(p => !p.paid)
+            .filter(p => {
+                const dueDate = new Date(p.dueDate);
+                return dueDate.getUTCMonth() === nextMonth && dueDate.getUTCFullYear() === nextMonthYear;
+            }).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+            
+        const settledPayables = payables.filter(p => p.paid)
+            .sort((a, b) => new Date(b.paidDate) - new Date(a.paidDate));
+
+        // Render Due Items
+        if (duePayables.length === 0) {
+            dueListEl.innerHTML = `<tr><td colspan="6" style="text-align:center;">No outstanding bills for this month. You're all clear!</td></tr>`;
+        } else {
+            duePayables.forEach(item => {
+                const row = document.createElement('tr'); row.dataset.id = item.id;
+                const dueDate = new Date(item.dueDate);
+                const isOverdue = dueDate < today;
+                row.innerHTML = `<td>${item.biller}</td><td>${item.description}</td><td>${formatCurrency(item.amount)}</td><td>${formatDate(item.dueDate)}</td>
+                    <td><button class="status-btn ${isOverdue ? 'overdue' : 'due'}">Settle</button></td>
+                    <td><button class="remove-item-btn">&times;</button></td>`;
+                dueListEl.appendChild(row);
+            });
+        }
+        
+        // Render Next Month's Items
+        if (nextMonthPayables.length === 0) {
+            nextMonthListEl.innerHTML = `<tr><td colspan="4" style="text-align:center;">No upcoming bills found for next month.</td></tr>`;
+        } else {
+            nextMonthPayables.forEach(item => {
+                const row = document.createElement('tr'); row.dataset.id = item.id;
+                row.innerHTML = `<td>${item.biller}</td><td>${item.description}</td><td>${formatCurrency(item.amount)}</td><td>${formatDate(item.dueDate)}</td>`;
+                nextMonthListEl.appendChild(row);
+            });
+        }
+
+        // Render Settled Items
+        if (settledPayables.length === 0) {
+            settledListEl.innerHTML = `<tr><td colspan="5" style="text-align:center;">No settled items yet.</td></tr>`;
+        } else {
+            settledPayables.forEach(item => {
+                const row = document.createElement('tr'); row.dataset.id = item.id;
+                row.innerHTML = `<td>${item.biller}</td><td>${item.description}</td><td>${formatCurrency(item.amount)}</td>
+                    <td>${formatDate(item.paidDate)}</td><td><button class="remove-item-btn">&times;</button></td>`;
+                settledListEl.appendChild(row);
+            });
+        }
+    }
+
+    function renderDailyExpenses() {
+        const dailyListEl = document.getElementById('daily-list');
+        dailyListEl.innerHTML = '';
+        const todayStr = new Date().toISOString().split('T')[0];
+        const todayExpenses = dailyExpenses.filter(e => e.date.startsWith(todayStr))
+            .sort((a,b) => new Date(b.date) - new Date(a.date));
+
+        if (todayExpenses.length === 0) {
+            dailyListEl.innerHTML = `<tr><td colspan="4" style="text-align:center;">No expenses logged for today.</td></tr>`;
+        } else {
+            todayExpenses.forEach(item => {
+                const row = document.createElement('tr'); row.dataset.id = item.id;
+                row.innerHTML = `<td>${item.description}</td><td>${formatCurrency(item.amount)}</td>
+                    <td>${new Date(item.date).toLocaleTimeString()}</td><td><button class="remove-item-btn">&times;</button></td>`;
+                dailyListEl.appendChild(row);
+            });
+        }
+    }
+
+    function updateSummaries() {
+        const totalPaid = payables.filter(p => p.paid).reduce((sum, p) => sum + parseFloat(p.amount), 0);
+        const totalDue = payables.filter(p => !p.paid).reduce((sum, p) => sum + parseFloat(p.amount), 0);
+        
+        const now = new Date();
+        const nextMonth = (now.getUTCMonth() + 1) % 12;
+        const nextMonthYear = nextMonth === 0 ? now.getUTCFullYear() + 1 : now.getUTCFullYear();
+        const nextMonthTotal = payables.filter(p => !p.paid)
+            .filter(p => {
+                const dueDate = new Date(p.dueDate);
+                return dueDate.getUTCMonth() === nextMonth && dueDate.getUTCFullYear() === nextMonthYear;
+            }).reduce((sum, p) => sum + parseFloat(p.amount), 0);
+        
+        const todayStr = new Date().toISOString().split('T')[0];
+        const dailyTotal = dailyExpenses.filter(e => e.date.startsWith(todayStr)).reduce((sum, e) => sum + parseFloat(e.amount), 0);
+
+        document.getElementById('totalMonthly').textContent = formatCurrency(totalDue + totalPaid);
+        document.getElementById('totalPaid').textContent = formatCurrency(totalPaid);
+        document.getElementById('totalDue').textContent = formatCurrency(totalDue);
+        document.getElementById('nextMonthTotal').textContent = formatCurrency(nextMonthTotal);
+        document.getElementById('dailyTotal').textContent = formatCurrency(dailyTotal);
+    }
+    
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const biller = document.getElementById('biller').value;
+        const description = document.getElementById('description').value || 'N/A';
+        const amount = parseFloat(document.getElementById('amount').value);
+        const purchaseDate = purchaseDateInput.value;
+        const dueDate = document.getElementById('dueDate').value;
+        const frequency = frequencySelect.value;
+        const isPaid = document.getElementById('status').value === 'paid';
+
+        if (!biller || isNaN(amount) || !purchaseDate || !dueDate) return alert('Please fill out all required fields.');
+
+        if (document.getElementById('daily').classList.contains('active')) {
+            dailyExpenses.push({ id: Date.now(), description, amount, date: new Date().toISOString() });
+        } else {
+             const createPayable = (override) => ({
+                id: Date.now() + Math.random(), biller, description, amount, purchaseDate, dueDate,
+                paid: isPaid, paidDate: isPaid ? new Date().toISOString() : null, frequency, ...override
+            });
+
+            const installments = frequency === 'lifetime' ? 60 : parseInt(installmentsSelect.value);
+            
+            if (frequency === 'recurring' || frequency === 'lifetime') {
+                const installmentAmount = (frequency === 'recurring') ? amount / installments : amount;
+                let currentDueDate = new Date(dueDate);
+                for (let i = 0; i < installments; i++) {
+                    payables.push(createPayable({
+                        amount: installmentAmount,
+                        dueDate: currentDueDate.toISOString().split('T')[0],
+                        description: `${description} (${frequency === 'lifetime' ? 'Lifetime' : `${i + 1}/${installments}`})`
+                    }));
+                    currentDueDate.setMonth(currentDueDate.getMonth() + 1);
+                }
+            } else {
+                payables.push(createPayable());
+            }
+        }
+        saveAndRender();
+        form.reset();
+        recurringOptions.style.display = 'none';
+        purchaseDateInput.value = new Date().toISOString().split('T')[0];
+    });
+    
+    frequencySelect.addEventListener('change', () => {
+        recurringOptions.style.display = frequencySelect.value === 'recurring' ? 'block' : 'none';
+    });
+
+    document.querySelector('.right-panel').addEventListener('click', (e) => {
+        const target = e.target;
+        const row = target.closest('tr');
+        if (!row || !row.dataset.id) return;
+
+        const id = parseFloat(row.dataset.id);
+        
+        if (target.classList.contains('remove-item-btn')) {
+            payables = payables.filter(p => p.id !== id);
+            dailyExpenses = dailyExpenses.filter(d => d.id !== id);
+        } else if (target.classList.contains('status-btn')) {
+            const payable = payables.find(p => p.id === id);
+            if (payable) {
+                payable.paid = true;
+                payable.paidDate = new Date().toISOString();
+            }
+        }
+        saveAndRender();
+    });
+
+    function convertToCSV(data) {
+        if (data.length === 0) return '';
+        const headers = Object.keys(data[0]);
+        const csvRows = data.map(row => 
+            headers.map(fieldName => JSON.stringify(row[fieldName])).join(',')
+        );
+        return [headers.join(','), ...csvRows].join('\r\n');
+    }
+
+    downloadBtn.addEventListener('click', () => {
+        if (payables.length === 0) return alert('No payables to download.');
+        const csvString = convertToCSV(payables);
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `payables-backup-${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+
+    uploadBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const lines = event.target.result.trim().split('\r\n');
+                if (lines.length < 2) return alert('CSV file is empty or has no data.');
+                
+                const headers = lines[0].split(',').map(h => h.trim());
+                const newPayables = lines.slice(1).map(line => {
+                    const values = line.split(',');
+                    const item = {};
+                    headers.forEach((header, index) => {
+                        try {
+                           item[header] = JSON.parse(values[index]);
+                        } catch {
+                           item[header] = values[index];
+                        }
+                    });
+                    return item;
+                });
+                
+                const existingIds = new Set(payables.map(p => p.id));
+                const filteredNew = newPayables.filter(p => p.id && !existingIds.has(p.id));
+
+                payables.push(...filteredNew);
+                saveAndRender();
+                alert(`${filteredNew.length} new items uploaded successfully.`);
+            } catch (error) {
+                alert('Failed to parse the CSV file.');
+                console.error("CSV Parse Error:", error);
+            } finally {
+                fileInput.value = '';
+            }
+        };
+        reader.readAsText(file);
+    });
+
+    clearBtn.addEventListener('click', () => {
+        if (confirm('Are you sure you want to clear ALL monthly payables (Due and Settled)? This cannot be undone.')) {
+            payables = [];
+            saveAndRender();
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        purchaseDateInput.value = new Date().toISOString().split('T')[0];
+        saveAndRender();
+    });
+  </script>
+</body>
+</html>
